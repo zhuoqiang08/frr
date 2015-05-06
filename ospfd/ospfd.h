@@ -92,9 +92,6 @@ struct ospf_master
   struct route_table *external_info[ZEBRA_ROUTE_MAX + 1];
 #define EXTERNAL_INFO(T)      om->external_info[T]
 
-  /* OSPF start time. */
-  time_t start_time;
-
   /* Various OSPF global configuration. */
   u_char options;
 #define OSPF_MASTER_SHUTDOWN (1 << 0) /* deferred-shutdown */  
