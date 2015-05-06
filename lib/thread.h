@@ -103,9 +103,7 @@ struct cpu_thread_history
 
 /* Clocks supported by Quagga */
 enum quagga_clkid {
-  QUAGGA_CLK_REALTIME = 0,	/* ala gettimeofday() */
-  QUAGGA_CLK_MONOTONIC,		/* monotonic, against an indeterminate base */
-  QUAGGA_CLK_REALTIME_STABILISED, /* like realtime, but non-decrementing */
+  QUAGGA_CLK_MONOTONIC = 1,	/* monotonic, against an indeterminate base */
 };
 
 /* Thread types. */
@@ -223,7 +221,6 @@ extern struct cmd_element clear_thread_cpu_cmd;
  */
 extern int quagga_gettime (enum quagga_clkid, struct timeval *);
 extern time_t quagga_monotime (void);
-extern time_t quagga_time (time_t *);
 
 /* Returns elapsed real (wall clock) time. */
 extern unsigned long thread_consumed_time(RUSAGE_T *after, RUSAGE_T *before,
