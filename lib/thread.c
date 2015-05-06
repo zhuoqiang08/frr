@@ -51,9 +51,9 @@ extern int agentx_enabled;
 
 
 /* Recent absolute time of day */
-struct timeval recent_time;
+__thread struct timeval recent_time;
 /* Relative time, since startup */
-static struct timeval relative_time;
+static __thread struct timeval relative_time;
 
 static struct hash *cpu_record = NULL;
 
