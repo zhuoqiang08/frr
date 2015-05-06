@@ -3676,7 +3676,7 @@ ospf_refresher_register_lsa (struct ospf *ospf, struct ospf_lsa *lsa)
       if (delay < 0)
 	delay = 0;
 
-      current_index = ospf->lsa_refresh_queue.index + (quagga_time (NULL)
+      current_index = ospf->lsa_refresh_queue.index + (quagga_monotime ()
                 - ospf->lsa_refresher_started)/OSPF_LSA_REFRESHER_GRANULARITY;
       
       index = (current_index + delay/OSPF_LSA_REFRESHER_GRANULARITY)
@@ -3737,7 +3737,7 @@ ospf_lsa_refresh_walker (struct thread *t)
      modulus. */
   ospf->lsa_refresh_queue.index =
    ((unsigned long)(ospf->lsa_refresh_queue.index +
-		    (quagga_time (NULL) - ospf->lsa_refresher_started)
+		    (quagga_monotime () - ospf->lsa_refresher_started)
 		    / OSPF_LSA_REFRESHER_GRANULARITY))
 		    % OSPF_LSA_REFRESHER_SLOTS;
 
@@ -3778,7 +3778,7 @@ ospf_lsa_refresh_walker (struct thread *t)
 
   ospf->t_lsa_refresher = thread_add_timer (master, ospf_lsa_refresh_walker,
 					   ospf, ospf->lsa_refresh_interval);
-  ospf->lsa_refresher_started = quagga_time (NULL);
+  ospf->lsa_refresher_started = quagga_monotime ();
 
   for (ALL_LIST_ELEMENTS (lsa_to_refresh, node, nnode, lsa))
     {
