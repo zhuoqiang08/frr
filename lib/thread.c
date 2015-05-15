@@ -50,6 +50,10 @@ extern int agentx_enabled;
 #endif
 
 
+/* current execution context */
+static __thread struct thread_master *thread_current_master = NULL;
+__thread struct thread *thread_current = NULL;
+
 /* recycling bin */
 static __thread struct thread_list unused = { NULL, NULL, 0 };
 
@@ -478,6 +482,8 @@ struct thread_master *
 thread_master_create ()
 {
   struct thread_master *rv;
+  int sockets[2];
+  int fl;
 
   if (cpu_record == NULL) 
     cpu_record 
@@ -486,12 +492,49 @@ thread_master_create ()
 
   rv = XCALLOC (MTYPE_THREAD_MASTER, sizeof (struct thread_master));
 
+  pthread_mutex_init (&rv->threads_mutex, NULL);
+
   /* Initialize the timer queues */
   rv->timer = pqueue_create();
   rv->background = pqueue_create();
   rv->timer->cmp = rv->background->cmp = thread_timer_cmp;
   rv->timer->update = rv->background->update = thread_timer_update;
 
+  if (socketpair (AF_UNIX, SOCK_STREAM, 0, sockets))
+    assert(0);
+
+  fl = fcntl (sockets[0], F_GETFL);
+  fcntl (sockets[0], F_SETFL, fl | O_NONBLOCK);
+  fl = fcntl (sockets[1], F_GETFL);
+  fcntl (sockets[1], F_SETFL, fl | O_NONBLOCK);
+
+  rv->bump_socket_wr = sockets[0];
+  rv->bump_socket_rd = sockets[1];
+
+  return rv;
+}
+
+
+/* multithreading */
+static void *thread_master_func (void *arg)
+{
+  struct thread_master *master = arg;
+  struct thread thread;
+
+  thread_current_master = master;
+
+  while (thread_fetch (master, &thread))
+    thread_call (&thread);
+
+  return NULL;
+}
+
+struct thread_master *
+thread_master_fork (void)
+{
+  struct thread_master *rv = thread_master_create ();
+
+  pthread_create (&rv->pthread, NULL, thread_master_func, rv);
   return rv;
 }
 
@@ -1168,8 +1211,6 @@ thread_getrusage (RUSAGE_T *r)
   quagga_gettimeofday(&recent_time);
 #endif /* HAVE_CLOCK_MONOTONIC */
 }
-
-struct thread *thread_current = NULL;
 
 /* We check thread consumed time. If the system has getrusage, we'll
    use that to get in-depth stats on the performance of the thread in addition

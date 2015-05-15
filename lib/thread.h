@@ -23,6 +23,7 @@
 #define _ZEBRA_THREAD_H
 
 #include <zebra.h>
+#include <pthread.h>
 
 struct rusage_t
 {
@@ -48,12 +49,18 @@ struct pqueue;
 /* Master of the theads. */
 struct thread_master
 {
+  /* guarded by threads_mutex */
   struct thread_list read;
   struct thread_list write;
   struct pqueue *timer;
   struct thread_list event;
   struct thread_list ready;
   struct pqueue *background;
+
+  pthread_t pthread;
+  pthread_mutex_t threads_mutex;
+  int bump_socket_wr, bump_socket_rd;
+
   fd_set readfd;
   fd_set writefd;
   fd_set exceptfd;
@@ -176,6 +183,8 @@ enum quagga_clkid {
 extern struct thread_master *thread_master_create (void);
 extern void thread_master_free (struct thread_master *);
 
+extern struct thread_master *thread_master_fork (void);
+
 extern struct thread *funcname_thread_add_read (struct thread_master *, 
 				                int (*)(struct thread *),
 				                void *, int, debugargdef);
@@ -233,6 +242,6 @@ extern __thread struct timeval recent_time;
 extern struct timeval recent_relative_time (void);
 
 /* only for use in logging functions! */
-extern struct thread *thread_current;
+extern __thread struct thread *thread_current;
 
 #endif /* _ZEBRA_THREAD_H */
