@@ -50,6 +50,9 @@ extern int agentx_enabled;
 #endif
 
 
+/* recycling bin */
+static __thread struct thread_list unused = { NULL, NULL, 0 };
+
 /* Recent absolute time of day */
 __thread struct timeval recent_time;
 /* Relative time, since startup */
@@ -531,7 +534,7 @@ thread_add_unuse (struct thread_master *m, struct thread *thread)
   assert (thread->next == NULL);
   assert (thread->prev == NULL);
   assert (thread->type == THREAD_UNUSED);
-  thread_list_add (&m->unuse, thread);
+  thread_list_add (&unused, thread);
 }
 
 /* Free all unused thread. */
@@ -571,7 +574,6 @@ thread_master_free (struct thread_master *m)
   thread_queue_free (m, m->timer);
   thread_list_free (m, &m->event);
   thread_list_free (m, &m->ready);
-  thread_list_free (m, &m->unuse);
   thread_queue_free (m, m->background);
   
   XFREE (MTYPE_THREAD_MASTER, m);
@@ -620,7 +622,7 @@ static struct thread *
 thread_get (struct thread_master *m, u_char type,
 	    int (*func) (struct thread *), void *arg, debugargdef)
 {
-  struct thread *thread = thread_trim_head (&m->unuse);
+  struct thread *thread = thread_trim_head (&unused);
 
   if (! thread)
     {

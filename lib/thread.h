@@ -53,7 +53,6 @@ struct thread_master
   struct pqueue *timer;
   struct thread_list event;
   struct thread_list ready;
-  struct thread_list unuse;
   struct pqueue *background;
   fd_set readfd;
   fd_set writefd;
