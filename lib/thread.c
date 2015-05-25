@@ -1192,9 +1192,14 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
         }
 #endif
 
-      timer_wait_ns.tv_sec = timer_wait->tv_sec;
-      timer_wait_ns.tv_nsec = timer_wait->tv_usec * 1000;
-      num = ppoll (m->pollfds, m->pollsize, &timer_wait_ns, NULL);
+      if (timer_wait)
+        {
+          timer_wait_ns.tv_sec = timer_wait->tv_sec;
+          timer_wait_ns.tv_nsec = timer_wait->tv_usec * 1000;
+         num = ppoll (m->pollfds, m->pollsize, &timer_wait_ns, NULL);
+        }
+      else
+        num = ppoll (m->pollfds, m->pollsize, NULL, NULL);
       
       /* Signals should get quick treatment */
       if (num < 0)
