@@ -492,6 +492,8 @@ thread_master_create ()
 
   rv = XCALLOC (MTYPE_THREAD_MASTER, sizeof (struct thread_master));
 
+  thread_current_master = rv;
+
   pthread_mutex_init (&rv->threads_mutex, NULL);
 
   /* Initialize the timer queues */
@@ -573,6 +575,9 @@ thread_list_delete (struct thread_list *list, struct thread *thread)
 static void
 thread_add_unuse (struct thread_master *m, struct thread *thread)
 {
+  thread->type = THREAD_UNUSED;
+  thread->ref = NULL;
+
   assert (m != NULL && thread != NULL);
   assert (thread->next == NULL);
   assert (thread->prev == NULL);
@@ -658,44 +663,82 @@ thread_timer_remain_second (struct thread *thread)
 }
 
 static void
-thread_do_add (struct thread_master *m, struct thread *thread)
+thread_master_poll_resize (struct thread_master *m, int fd)
 {
-  switch (thread->type)
+  size_t newsize, i;
+
+  if (fd < (int)m->pollsize)
+    return;
+
+  /* pad to multiples of 16 */
+  newsize = ((size_t)fd + 16) & ~15ULL;
+  m->pollfds = XREALLOC (MTYPE_THREAD_MASTER, m->pollfds,
+                         newsize * sizeof (*m->pollfds));
+  for (i = m->pollsize; i < newsize; i++)
     {
-      case THREAD_READ:   thread_list_add (&m->read, thread); break;
-      default: assert(0);
+      m->pollfds[i].fd = -1;
+      m->pollfds[i].events = 0;
+      m->pollfds[i].revents = 0;
     }
+
+  m->pollsize = newsize;
 }
 
 static void
-thread_add (struct thread_master *m, struct thread *thread, thread_ref_t *ref)
+thread_master_do_install (struct thread_master *m, struct thread *thread)
+{
+  short events = 0;
+  struct thread_list *list;
+
+  assert (m == thread_current_master);
+
+  switch (thread->type) {
+  case THREAD_READ:  events = POLLIN;  list = &m->read;  break;
+  case THREAD_WRITE: events = POLLOUT; list = &m->write; break;
+  default: assert (0);
+  }
+
+  thread_list_add (list, thread);
+
+  thread_master_poll_resize (m, thread->u.fd);
+
+  if (m->pollfds[thread->u.fd].events & events)
+    zlog (NULL, LOG_WARNING, "fd [%d] duplicate %s thread", thread->u.fd,
+          thread->type == THREAD_READ ? "read" : "write");
+
+  m->pollfds[thread->u.fd].fd = thread->u.fd;
+  m->pollfds[thread->u.fd].events |= events;
+}
+
+static void
+thread_list_install (struct thread_master *m, struct thread *thread,
+                     thread_ref_t *ref)
 {
   if (ref)
     {
-      pthread_mutex_lock (ref->mutex);
-      assert (ref->status == REF_EMPTY);
-      assert (thread->ref == NULL;
+      pthread_mutex_lock (&ref->mutex);
+      assert (ref->status == THREAD_REF_EMPTY);
+      assert (thread->ref == NULL);
 
-      ref->status = REF_SCHED;
+      ref->status = THREAD_REF_SCHED;
       thread->ref = ref;
       ref->thread = thread;
     }
 
   if (m == thread_current_master)
-    thread_do_add (m, thread);
+    thread_master_do_install (m, thread);
   else
     {
       char dummy = 0;
 
-      thread->next_add = &thread;
+      thread->next_add = thread;
       atomic_exchange_explicit (&m->queue_add, &thread->next_add,
                                 memory_order_release);
-
-      write (rv->bump_socket_wr, dummy, sizeof (dummy);
+      write (m->bump_socket_wr, &dummy, sizeof (dummy));
     }
 
   if (ref)
-    pthread_mutex_unlock (ref->mutex);
+    pthread_mutex_unlock (&ref->mutex);
 }
 
 #define debugargdef  const char *funcname, const char *schedfrom, int fromln
@@ -736,17 +779,9 @@ funcname_thread_add_read (struct thread_master *m, thread_ref_t *ref,
   struct thread *thread;
 
   assert (m != NULL);
-
-  if (FD_ISSET (fd, &m->readfd))
-    {
-      zlog (NULL, LOG_WARNING, "There is already read fd [%d]", fd);
-      return NULL;
-    }
-
   thread = thread_get (m, THREAD_READ, func, arg, debugargpass);
-  FD_SET (fd, &m->readfd);
   thread->u.fd = fd;
-  thread_add (m, thread, ref);
+  thread_list_install (m, thread, ref);
 
   return thread;
 }
@@ -760,17 +795,9 @@ funcname_thread_add_write (struct thread_master *m, thread_ref_t *ref,
   struct thread *thread;
 
   assert (m != NULL);
-
-  if (FD_ISSET (fd, &m->writefd))
-    {
-      zlog (NULL, LOG_WARNING, "There is already write fd [%d]", fd);
-      return NULL;
-    }
-
   thread = thread_get (m, THREAD_WRITE, func, arg, debugargpass);
-  FD_SET (fd, &m->writefd);
   thread->u.fd = fd;
-  thread_list_add (&m->write, thread);
+  thread_list_install (m, thread, ref);
 
   return thread;
 }
@@ -786,6 +813,7 @@ funcname_thread_add_timer_timeval (struct thread_master *m, thread_ref_t *ref,
   struct thread *thread;
   struct pqueue *queue;
   struct timeval alarm_time;
+  char dummy = 0;
 
   assert (m != NULL);
 
@@ -801,7 +829,12 @@ funcname_thread_add_timer_timeval (struct thread_master *m, thread_ref_t *ref,
   alarm_time.tv_usec = relative_time.tv_usec + time_relative->tv_usec;
   thread->u.sands = timeval_adjust(alarm_time);
 
+  pthread_mutex_lock (&m->threads_mutex);
   pqueue_enqueue(thread, queue);
+  pthread_mutex_unlock (&m->threads_mutex);
+  if (m != thread_current_master)
+    write (m->bump_socket_wr, &dummy, sizeof (dummy));
+
   return thread;
 }
 
@@ -875,12 +908,17 @@ funcname_thread_add_event (struct thread_master *m, thread_ref_t *ref,
 		  debugargdef)
 {
   struct thread *thread;
+  char dummy = 0;
 
   assert (m != NULL);
 
   thread = thread_get (m, THREAD_EVENT, func, arg, debugargpass);
   thread->u.val = val;
+  pthread_mutex_lock (&m->threads_mutex);
   thread_list_add (&m->event, thread);
+  pthread_mutex_unlock (&m->threads_mutex);
+  if (m != thread_current_master)
+    write (m->bump_socket_wr, &dummy, sizeof (dummy));
 
   return thread;
 }
@@ -891,17 +929,30 @@ thread_cancel (struct thread *thread)
 {
   struct thread_list *list = NULL;
   struct pqueue *queue = NULL;
-  
+  struct thread_master *m = thread->master;
+
+  assert (thread->master == thread_current_master);
+  assert (thread->ref == NULL);
+  pthread_mutex_lock (&m->threads_mutex);
+
   switch (thread->type)
     {
     case THREAD_READ:
-      assert (FD_ISSET (thread->u.fd, &thread->master->readfd));
-      FD_CLR (thread->u.fd, &thread->master->readfd);
+      assert ((unsigned)thread->u.fd < m->pollsize);
+      if ((unsigned)thread->u.fd < m->pollsize)
+        {
+          assert (m->pollfds[thread->u.fd].events & POLLIN);
+          m->pollfds[thread->u.fd].events &= ~POLLIN;
+        }
       list = &thread->master->read;
       break;
     case THREAD_WRITE:
-      assert (FD_ISSET (thread->u.fd, &thread->master->writefd));
-      FD_CLR (thread->u.fd, &thread->master->writefd);
+      assert ((unsigned)thread->u.fd < m->pollsize);
+      if ((unsigned)thread->u.fd < m->pollsize)
+        {
+          assert (m->pollfds[thread->u.fd].events & POLLOUT);
+          m->pollfds[thread->u.fd].events &= ~POLLOUT;
+        }
       list = &thread->master->write;
       break;
     case THREAD_TIMER:
@@ -936,7 +987,7 @@ thread_cancel (struct thread *thread)
       assert(!"Thread should be either in queue or list!");
     }
 
-  thread->type = THREAD_UNUSED;
+  pthread_mutex_unlock (&m->threads_mutex);
   thread_add_unuse (thread->master, thread);
 }
 
@@ -947,6 +998,9 @@ thread_cancel_event (struct thread_master *m, void *arg)
   unsigned int ret = 0;
   struct thread *thread;
 
+  assert (m == thread_current_master);
+  pthread_mutex_lock (&m->threads_mutex);
+
   thread = m->event.head;
   while (thread)
     {
@@ -955,11 +1009,11 @@ thread_cancel_event (struct thread_master *m, void *arg)
       t = thread;
       thread = t->next;
 
+      assert (t->ref == NULL);
       if (t->arg == arg)
         {
           ret++;
           thread_list_delete (&m->event, t);
-          t->type = THREAD_UNUSED;
           thread_add_unuse (m, t);
         }
     }
@@ -973,14 +1027,16 @@ thread_cancel_event (struct thread_master *m, void *arg)
       t = thread;
       thread = t->next;
 
+      assert (t->ref == NULL);
       if (t->arg == arg)
         {
           ret++;
           thread_list_delete (&m->ready, t);
-          t->type = THREAD_UNUSED;
           thread_add_unuse (m, t);
         }
     }
+
+  pthread_mutex_unlock (&m->threads_mutex);
   return ret;
 }
 
@@ -996,18 +1052,9 @@ thread_timer_wait (struct pqueue *queue, struct timeval *timer_val)
   return NULL;
 }
 
-static struct thread *
-thread_run (struct thread_master *m, struct thread *thread,
-	    struct thread *fetch)
-{
-  *fetch = *thread;
-  thread->type = THREAD_UNUSED;
-  thread_add_unuse (m, thread);
-  return fetch;
-}
-
 static int
-thread_process_fd (struct thread_list *list, fd_set *fdset, fd_set *mfdset)
+thread_process_fd (struct thread_master *m, struct thread_list *list,
+                   short event)
 {
   struct thread *thread;
   struct thread *next;
@@ -1019,10 +1066,11 @@ thread_process_fd (struct thread_list *list, fd_set *fdset, fd_set *mfdset)
     {
       next = thread->next;
 
-      if (FD_ISSET (THREAD_FD (thread), fdset))
+      if (m->pollsize > (unsigned)thread->u.fd
+          && m->pollfds[thread->u.fd].revents & event)
         {
-          assert (FD_ISSET (THREAD_FD (thread), mfdset));
-          FD_CLR(THREAD_FD (thread), mfdset);
+          m->pollfds[thread->u.fd].events &= ~event;
+
           thread_list_delete (list, thread);
           thread_list_add (&thread->master->ready, thread);
           thread->type = THREAD_READY;
@@ -1071,27 +1119,23 @@ thread_process (struct thread_list *list)
   return ready;
 }
 
-
 /* Fetch next ready thread. */
 struct thread *
 thread_fetch (struct thread_master *m, struct thread *fetch)
 {
   struct thread *thread;
-  fd_set readfd;
-  fd_set writefd;
-  fd_set exceptfd;
   struct timeval timer_val = { .tv_sec = 0, .tv_usec = 0 };
   struct timeval timer_val_bg;
   struct timeval *timer_wait = &timer_val;
   struct timeval *timer_wait_bg;
+  struct timespec timer_wait_ns;
 
   while (1)
     {
       int num = 0;
-#if defined HAVE_SNMP && defined SNMP_AGENTX
+#if 0 && defined HAVE_SNMP && defined SNMP_AGENTX
       struct timeval snmp_timer_wait;
       int snmpblock = 0;
-      int fdsetsize;
 #endif
       
       /* Signals pre-empt everything */
@@ -1101,8 +1145,12 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
        * more.
        */
       if ((thread = thread_trim_head (&m->ready)) != NULL)
-        return thread_run (m, thread, fetch);
-      
+        {
+          thread_call (thread);
+          thread_add_unuse (m, thread);
+          continue;
+        }
+
       /* To be fair to all kinds of threads, and avoid starvation, we
        * need to be careful to consider all thread types for scheduling
        * in each quanta. I.e. we should not return early from here on.
@@ -1110,11 +1158,6 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
        
       /* Normal event are the next highest priority.  */
       thread_process (&m->event);
-      
-      /* Structure copy.  */
-      readfd = m->readfd;
-      writefd = m->writefd;
-      exceptfd = m->exceptfd;
       
       /* Calculate select wait timer if nothing else to do */
       if (m->ready.count == 0)
@@ -1128,7 +1171,7 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
             timer_wait = timer_wait_bg;
         }
       
-#if defined HAVE_SNMP && defined SNMP_AGENTX
+#if 0 && defined HAVE_SNMP && defined SNMP_AGENTX
       /* When SNMP is enabled, we may have to select() on additional
 	 FD. snmp_select_info() will add them to `readfd'. The trick
 	 with this function is its last argument. We need to set it to
@@ -1148,7 +1191,10 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
             timer_wait = &snmp_timer_wait;
         }
 #endif
-      num = select (FD_SETSIZE, &readfd, &writefd, &exceptfd, timer_wait);
+
+      timer_wait_ns.tv_sec = timer_wait->tv_sec;
+      timer_wait_ns.tv_nsec = timer_wait->tv_usec * 1000;
+      num = ppoll (m->pollfds, m->pollsize, &timer_wait_ns, NULL);
       
       /* Signals should get quick treatment */
       if (num < 0)
@@ -1159,7 +1205,7 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
             return NULL;
         }
 
-#if defined HAVE_SNMP && defined SNMP_AGENTX
+#if 0 && defined HAVE_SNMP && defined SNMP_AGENTX
       if (agentx_enabled)
         {
           if (num > 0)
@@ -1183,9 +1229,9 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
       if (num > 0)
         {
           /* Normal priority read thead. */
-          thread_process_fd (&m->read, &readfd, &m->readfd);
+          thread_process_fd (m, &m->read, POLLIN);
           /* Write thead. */
-          thread_process_fd (&m->write, &writefd, &m->writefd);
+          thread_process_fd (m, &m->write, POLLOUT);
         }
 
 #if 0
@@ -1201,7 +1247,11 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
       thread_timer_process (m->background, &relative_time);
       
       if ((thread = thread_trim_head (&m->ready)) != NULL)
-        return thread_run (m, thread, fetch);
+        {
+          thread_call (thread);
+          thread_add_unuse (m, thread);
+          continue;
+        }
     }
 }
 

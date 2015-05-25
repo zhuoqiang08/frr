@@ -23,6 +23,7 @@
 #define _ZEBRA_THREAD_H
 
 #include <zebra.h>
+#include <poll.h>
 #include <pthread.h>
 #include "qatomic.h"
 #include "seqlock.h"
@@ -51,22 +52,28 @@ struct pqueue;
 /* Master of the theads. */
 struct thread_master
 {
+  /* owned by runner thread, do not touch! */
   struct thread_list read;
   struct thread_list write;
+
+  /* guarded by threads_mutex */
   struct pqueue *timer;
   struct thread_list event;
   struct thread_list ready;
   struct pqueue *background;
 
   pthread_t pthread;
+  pthread_mutex_t threads_mutex;
   int bump_socket_wr, bump_socket_rd;
 
+  /* atomic lists for change submission */
   struct thread * _Atomic queue_add;
   struct thread * _Atomic queue_del;
 
-  fd_set readfd;
-  fd_set writefd;
-  fd_set exceptfd;
+  /* owned by runner thread, do not touch! */
+  struct pollfd *pollfds;
+  size_t pollsize;
+
   unsigned long alloc;
 };
 
@@ -205,7 +212,8 @@ enum quagga_clkid {
         funcname_thread_execute         (m,NULL,f,a,v,#f,__FILE__,__LINE__)
 
 /* The 4th arg to thread_add_background is the # of milliseconds to delay. */
-#define thread_add_background(m,f,a,v) funcname_thread_add_background(m,f,a,v,#f,__FILE__,__LINE__)
+#define thread_add_background(m,f,a,v) \
+        funcname_thread_add_background  (m,NULL,f,a,v,#f,__FILE__,__LINE__)
 
 /* Prototypes. */
 extern struct thread_master *thread_master_create (void);
