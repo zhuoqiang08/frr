@@ -51,7 +51,6 @@ struct pqueue;
 /* Master of the theads. */
 struct thread_master
 {
-  /* guarded by threads_mutex */
   struct thread_list read;
   struct thread_list write;
   struct pqueue *timer;
@@ -60,8 +59,10 @@ struct thread_master
   struct pqueue *background;
 
   pthread_t pthread;
-  pthread_mutex_t threads_mutex;
   int bump_socket_wr, bump_socket_rd;
+
+  struct thread * _Atomic queue_add;
+  struct thread * _Atomic queue_del;
 
   fd_set readfd;
   fd_set writefd;
@@ -71,11 +72,21 @@ struct thread_master
 
 typedef unsigned char thread_type;
 
+enum thread_ref_status {
+  THREAD_REF_EMPTY = 0,
+  THREAD_REF_SCHED,
+  THREAD_REF_RUNNING,
+  THREAD_REF_CANCEL,
+};
+
 struct thread;
 typedef struct thread_ref {
-  _Atomic uint32_t status;
+  uint32_t status;
   struct thread *thread;
+  pthread_mutex_t mutex;
 } thread_ref_t;
+
+#define THREAD_REF_INIT { THREAD_REF_EMPTY, NULL, PTHREAD_MUTEX_INITIALIZER }
 
 /* Thread itself. */
 struct thread
@@ -101,13 +112,6 @@ struct thread
   const char *funcname;
   const char *schedfrom;
   int schedfrom_line;
-};
-
-enum thread_ref_status {
-  REF_INIT = 0,
-  REF_SCHEDQ,
-  REF_RUNNING,
-  REF_CANCEL,
 };
 
 struct cpu_thread_history 

@@ -657,6 +657,47 @@ thread_timer_remain_second (struct thread *thread)
     return 0;
 }
 
+static void
+thread_do_add (struct thread_master *m, struct thread *thread)
+{
+  switch (thread->type)
+    {
+      case THREAD_READ:   thread_list_add (&m->read, thread); break;
+      default: assert(0);
+    }
+}
+
+static void
+thread_add (struct thread_master *m, struct thread *thread, thread_ref_t *ref)
+{
+  if (ref)
+    {
+      pthread_mutex_lock (ref->mutex);
+      assert (ref->status == REF_EMPTY);
+      assert (thread->ref == NULL;
+
+      ref->status = REF_SCHED;
+      thread->ref = ref;
+      ref->thread = thread;
+    }
+
+  if (m == thread_current_master)
+    thread_do_add (m, thread);
+  else
+    {
+      char dummy = 0;
+
+      thread->next_add = &thread;
+      atomic_exchange_explicit (&m->queue_add, &thread->next_add,
+                                memory_order_release);
+
+      write (rv->bump_socket_wr, dummy, sizeof (dummy);
+    }
+
+  if (ref)
+    pthread_mutex_unlock (ref->mutex);
+}
+
 #define debugargdef  const char *funcname, const char *schedfrom, int fromln
 #define debugargpass funcname, schedfrom, fromln
 
@@ -705,7 +746,7 @@ funcname_thread_add_read (struct thread_master *m, thread_ref_t *ref,
   thread = thread_get (m, THREAD_READ, func, arg, debugargpass);
   FD_SET (fd, &m->readfd);
   thread->u.fd = fd;
-  thread_list_add (&m->read, thread);
+  thread_add (m, thread, ref);
 
   return thread;
 }
