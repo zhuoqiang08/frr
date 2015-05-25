@@ -504,6 +504,8 @@ thread_master_create ()
   rv->timer->cmp = rv->background->cmp = thread_timer_cmp;
   rv->timer->update = rv->background->update = thread_timer_update;
 
+  seqlock_init (&rv->sqlo);
+
   if (socketpair (AF_UNIX, SOCK_STREAM, 0, sockets))
     assert(0);
 
@@ -943,7 +945,14 @@ thread_cancel (struct thread *thread)
   struct thread_master *m = thread->master;
 
   assert (thread->master == thread_current_master);
-  assert (thread->ref == NULL);
+
+  if (thread->ref)
+    {
+      pthread_mutex_lock (&thread->ref->mutex);
+      thread->ref->status = THREAD_REF_EMPTY;
+      thread->ref->thread = NULL;
+      pthread_mutex_unlock (&thread->ref->mutex);
+    }
 
   switch (thread->type)
     {
@@ -1002,7 +1011,7 @@ thread_cancel (struct thread *thread)
     }
   else if (lockless)
     {
-      thread_list_delete (list, thread);
+      thread_list_delete (lockless, thread);
     }
   else
     {
@@ -1059,6 +1068,51 @@ thread_cancel_event (struct thread_master *m, void *arg)
 
   pthread_mutex_unlock (&m->threads_mutex);
   return ret;
+}
+
+void
+thread_cancel_async (thread_ref_t *ref)
+{
+  seqlock_val_t wait_for;
+  struct thread_master *m;
+  uint32_t status;
+  char dummy = 0;
+
+  pthread_mutex_lock (&ref->mutex);
+  status = ref->status;
+  assert (status != THREAD_REF_CANCEL);
+  if (status == THREAD_REF_EMPTY)
+    {
+      pthread_mutex_unlock (&ref->mutex);
+      return;
+    }
+  assert (ref->thread);
+  ref->status = THREAD_REF_CANCEL;
+
+  m = ref->thread->master;
+  if (m == thread_current_master)
+    {
+      pthread_mutex_unlock (&ref->mutex);
+      thread_cancel (ref->thread);
+      return;
+    }
+
+  if (status == THREAD_REF_SCHED)
+    {
+      struct thread *head;
+
+      head = atomic_load_explicit (&m->queue_del, memory_order_relaxed);
+      do
+        ref->thread->next_del = head;
+      while (!atomic_compare_exchange_weak_explicit (
+                        &m->queue_del, &head, ref->thread,
+                        memory_order_release, memory_order_relaxed));
+    }
+  pthread_mutex_unlock (&ref->mutex);
+
+  wait_for = seqlock_ticket_get (&m->sqlo);
+  write (m->bump_socket_wr, &dummy, sizeof (dummy));
+  seqlock_ticket_wait (&m->sqlo, wait_for);
 }
 
 static struct timeval *
@@ -1145,9 +1199,12 @@ thread_master_bump (struct thread_master *m)
 {
   char throwaway[4096];
   struct thread *qptr, *qnext;
+  seqlock_val_t work_val;
 
   read (m->bump_socket_rd, throwaway, sizeof (throwaway));
-  zlog_info ("thread_master<%ld> got bumped", (long)m->tid);
+  work_val = seqlock_work_getticket (&m->sqlo);
+  zlog_info ("thread_master<%ld> got bumped (work %lu)", (long)m->tid,
+             (unsigned long)work_val);
 
   qptr = atomic_exchange (&m->queue_add, (struct thread *)NULL);
   for (; qptr; qptr = qnext)
@@ -1170,6 +1227,33 @@ thread_master_bump (struct thread_master *m)
                  (void *)qptr, qptr->funcname);
       thread_cancel (qptr);
     }
+
+  seqlock_work_set (&m->sqlo, work_val);
+}
+
+static bool
+thread_can_run (struct thread_master *m, struct thread *thread)
+{
+  if (thread->ref)
+    {
+      pthread_mutex_lock (&thread->ref->mutex);
+      if (thread->ref->status == THREAD_REF_CANCEL)
+        {
+          pthread_mutex_unlock (&thread->ref->mutex);
+
+          pthread_mutex_lock (&m->threads_mutex);
+          thread->type = THREAD_READY;
+          thread_list_add (&m->ready, thread);
+          pthread_mutex_unlock (&m->threads_mutex);
+          zlog_info ("thread_master<%ld> not running cancelled (%p) %s()",
+                     (long)m->tid, (void *)thread, thread->funcname);
+          return false;
+        }
+      thread->ref->status = THREAD_REF_RUNNING;
+      pthread_mutex_unlock (&thread->ref->mutex);
+    }
+
+  return true;
 }
 
 /* Fetch next ready thread. */
@@ -1203,9 +1287,12 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
         {
           pthread_mutex_unlock (&m->threads_mutex);
 
-          thread_call (thread);
-          thread_add_unuse (m, thread);
-          continue;
+          if (thread_can_run (m, thread))
+            {
+              thread_call (thread);
+              thread_add_unuse (m, thread);
+              continue;
+            }
         }
 
       /* To be fair to all kinds of threads, and avoid starvation, we
@@ -1325,7 +1412,7 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
 
       pthread_mutex_unlock (&m->threads_mutex);
 
-      if (thread != NULL)
+      if (thread != NULL && thread_can_run (m, thread))
         {
           thread_call (thread);
           thread_add_unuse (m, thread);
@@ -1406,20 +1493,6 @@ thread_call (struct thread *thread)
       
       thread->hist = hash_get (cpu_record, &tmp, 
                     (void * (*) (void *))cpu_record_hash_alloc);
-    }
-
-  if (thread->ref)
-    {
-      pthread_mutex_lock (&thread->ref->mutex);
-      if (thread->ref->status == THREAD_REF_CANCEL)
-        {
-          thread->ref->status = THREAD_REF_EMPTY;
-          thread->ref->thread = NULL;
-          pthread_mutex_unlock (&thread->ref->mutex);
-          return;
-        }
-      thread->ref->status = THREAD_REF_RUNNING;
-      pthread_mutex_unlock (&thread->ref->mutex);
     }
 
   GETRUSAGE (&before);

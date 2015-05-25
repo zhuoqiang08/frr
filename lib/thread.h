@@ -70,6 +70,8 @@ struct thread_master
   struct thread * _Atomic queue_add;
   struct thread * _Atomic queue_del;
 
+  struct seqlock sqlo;
+
   /* owned by runner thread, do not touch! */
   struct pollfd *pollfds;
   size_t pollsize;
@@ -255,6 +257,8 @@ extern void thread_call (struct thread *);
 extern unsigned long thread_timer_remain_second (struct thread *);
 extern int thread_should_yield (struct thread *);
 extern unsigned long timeval_elapsed (struct timeval a, struct timeval b);
+
+extern void thread_cancel_async (thread_ref_t *ref);
 
 /* Internal libzebra exports */
 extern void thread_getrusage (RUSAGE_T *);
