@@ -8,6 +8,7 @@ lib_LTLIBRARIES = libzebra.la
 libzebra_la_LDFLAGS = -version-info 0:0:0 
 
 libzebra_la_SOURCES = \
+	seqlock.c \
 	network.c pid_output.c getopt.c getopt1.c daemon.c \
 	checksum.c vector.c linklist.c vty.c command.c \
 	sockunion.c prefix.c thread.c if.c buffer.c table.c hash.c \
@@ -25,6 +26,7 @@ libzebra_la_LIBADD = @LIB_REGEX@ @LIBCAP@
 
 pkginclude_HEADERS = \
 	qatomic.h \
+	seqlock.h \
 	buffer.h checksum.h command.h filter.h getopt.h hash.h \
 	if.h linklist.h log.h \
 	memory.h network.h prefix.h routemap.h distribute.h sockunion.h \
