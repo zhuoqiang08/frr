@@ -49,6 +49,7 @@ extern int agentx_enabled;
 #include <mach/mach_time.h>
 #endif
 
+#include <sys/syscall.h>
 
 /* current execution context */
 static __thread struct thread_master *thread_current_master = NULL;
@@ -492,7 +493,8 @@ thread_master_create ()
 
   rv = XCALLOC (MTYPE_THREAD_MASTER, sizeof (struct thread_master));
 
-  thread_current_master = rv;
+  if (thread_current_master == NULL)
+    thread_current_master = rv;
 
   pthread_mutex_init (&rv->threads_mutex, NULL);
 
@@ -524,6 +526,7 @@ static void *thread_master_func (void *arg)
   struct thread thread;
 
   thread_current_master = master;
+  master->tid = syscall (SYS_gettid);
 
   while (thread_fetch (master, &thread))
     thread_call (&thread);
@@ -717,7 +720,9 @@ thread_list_install (struct thread_master *m, struct thread *thread,
   if (ref)
     {
       pthread_mutex_lock (&ref->mutex);
-      assert (ref->status == THREAD_REF_EMPTY);
+      assert (
+          (ref->status == THREAD_REF_EMPTY && ref->thread == NULL)
+          || (ref->status == THREAD_REF_RUNNING));
       assert (thread->ref == NULL);
 
       ref->status = THREAD_REF_SCHED;
@@ -726,14 +731,20 @@ thread_list_install (struct thread_master *m, struct thread *thread,
     }
 
   if (m == thread_current_master)
-    thread_master_do_install (m, thread);
+    {
+      thread_master_do_install (m, thread);
+    }
   else
     {
       char dummy = 0;
+      struct thread *head;
 
-      thread->next_add = thread;
-      atomic_exchange_explicit (&m->queue_add, &thread->next_add,
-                                memory_order_release);
+      head = atomic_load_explicit (&m->queue_add, memory_order_relaxed);
+      do
+        thread->next_add = head;
+      while (!atomic_compare_exchange_weak_explicit (
+                        &m->queue_add, &head, thread,
+                        memory_order_release, memory_order_relaxed));
       write (m->bump_socket_wr, &dummy, sizeof (dummy));
     }
 
@@ -927,13 +938,12 @@ funcname_thread_add_event (struct thread_master *m, thread_ref_t *ref,
 void
 thread_cancel (struct thread *thread)
 {
-  struct thread_list *list = NULL;
+  struct thread_list *list = NULL, *lockless = NULL;
   struct pqueue *queue = NULL;
   struct thread_master *m = thread->master;
 
   assert (thread->master == thread_current_master);
   assert (thread->ref == NULL);
-  pthread_mutex_lock (&m->threads_mutex);
 
   switch (thread->type)
     {
@@ -943,8 +953,10 @@ thread_cancel (struct thread *thread)
         {
           assert (m->pollfds[thread->u.fd].events & POLLIN);
           m->pollfds[thread->u.fd].events &= ~POLLIN;
+          if (m->pollfds[thread->u.fd].events == 0)
+            m->pollfds[thread->u.fd].fd = -1;
         }
-      list = &thread->master->read;
+      lockless = &thread->master->read;
       break;
     case THREAD_WRITE:
       assert ((unsigned)thread->u.fd < m->pollsize);
@@ -952,8 +964,10 @@ thread_cancel (struct thread *thread)
         {
           assert (m->pollfds[thread->u.fd].events & POLLOUT);
           m->pollfds[thread->u.fd].events &= ~POLLOUT;
+          if (m->pollfds[thread->u.fd].events == 0)
+            m->pollfds[thread->u.fd].fd = -1;
         }
-      list = &thread->master->write;
+      lockless = &thread->master->write;
       break;
     case THREAD_TIMER:
       queue = thread->master->timer;
@@ -974,11 +988,19 @@ thread_cancel (struct thread *thread)
 
   if (queue)
     {
+      pthread_mutex_lock (&m->threads_mutex);
       assert(thread->index >= 0);
       assert(thread == queue->array[thread->index]);
       pqueue_remove_at(thread->index, queue);
+      pthread_mutex_unlock (&m->threads_mutex);
     }
   else if (list)
+    {
+      pthread_mutex_lock (&m->threads_mutex);
+      thread_list_delete (list, thread);
+      pthread_mutex_unlock (&m->threads_mutex);
+    }
+  else if (lockless)
     {
       thread_list_delete (list, thread);
     }
@@ -987,7 +1009,6 @@ thread_cancel (struct thread *thread)
       assert(!"Thread should be either in queue or list!");
     }
 
-  pthread_mutex_unlock (&m->threads_mutex);
   thread_add_unuse (thread->master, thread);
 }
 
@@ -1119,6 +1140,38 @@ thread_process (struct thread_list *list)
   return ready;
 }
 
+static void
+thread_master_bump (struct thread_master *m)
+{
+  char throwaway[4096];
+  struct thread *qptr, *qnext;
+
+  read (m->bump_socket_rd, throwaway, sizeof (throwaway));
+  zlog_info ("thread_master<%ld> got bumped", (long)m->tid);
+
+  qptr = atomic_exchange (&m->queue_add, (struct thread *)NULL);
+  for (; qptr; qptr = qnext)
+    {
+      qnext = qptr->next_add;
+      qptr->next_add = NULL;
+
+      zlog_info ("thread_master<%ld> install (%p) %s()", (long)m->tid,
+                 (void *)qptr, qptr->funcname);
+      thread_master_do_install (m, qptr);
+    }
+
+  qptr = atomic_exchange (&m->queue_del, (struct thread *)NULL);
+  for (; qptr; qptr = qnext)
+    {
+      qnext = qptr->next_del;
+      qptr->next_del = NULL;
+
+      zlog_info ("thread_master<%ld> cancel (%p) %s()", (long)m->tid,
+                 (void *)qptr, qptr->funcname);
+      thread_cancel (qptr);
+    }
+}
+
 /* Fetch next ready thread. */
 struct thread *
 thread_fetch (struct thread_master *m, struct thread *fetch)
@@ -1144,8 +1197,12 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
       /* Drain the ready queue of already scheduled jobs, before scheduling
        * more.
        */
+
+      pthread_mutex_lock (&m->threads_mutex);
       if ((thread = thread_trim_head (&m->ready)) != NULL)
         {
+          pthread_mutex_unlock (&m->threads_mutex);
+
           thread_call (thread);
           thread_add_unuse (m, thread);
           continue;
@@ -1170,7 +1227,13 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
               (!timer_wait || (timeval_cmp (*timer_wait, *timer_wait_bg) > 0)))
             timer_wait = timer_wait_bg;
         }
-      
+
+      thread_master_poll_resize (m, m->bump_socket_rd);
+      m->pollfds[m->bump_socket_rd].fd = m->bump_socket_rd;
+      m->pollfds[m->bump_socket_rd].events = POLLIN;
+
+      pthread_mutex_unlock (&m->threads_mutex);
+
 #if 0 && defined HAVE_SNMP && defined SNMP_AGENTX
       /* When SNMP is enabled, we may have to select() on additional
 	 FD. snmp_select_info() will add them to `readfd'. The trick
@@ -1210,6 +1273,12 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
             return NULL;
         }
 
+      if (m->pollfds[m->bump_socket_rd].revents & POLLIN)
+        {
+          thread_master_bump (m);
+          m->pollfds[m->bump_socket_rd].revents = 0;
+        }
+
 #if 0 && defined HAVE_SNMP && defined SNMP_AGENTX
       if (agentx_enabled)
         {
@@ -1224,6 +1293,7 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
         }
 #endif
 
+      pthread_mutex_lock (&m->threads_mutex);
       /* Check foreground timers.  Historically, they have had higher
          priority than I/O threads, so let's push them onto the ready
 	 list in front of the I/O threads. */
@@ -1250,8 +1320,12 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
 
       /* Background timer/events, lowest priority */
       thread_timer_process (m->background, &relative_time);
-      
-      if ((thread = thread_trim_head (&m->ready)) != NULL)
+
+      thread = thread_trim_head (&m->ready);
+
+      pthread_mutex_unlock (&m->threads_mutex);
+
+      if (thread != NULL)
         {
           thread_call (thread);
           thread_add_unuse (m, thread);
@@ -1334,6 +1408,20 @@ thread_call (struct thread *thread)
                     (void * (*) (void *))cpu_record_hash_alloc);
     }
 
+  if (thread->ref)
+    {
+      pthread_mutex_lock (&thread->ref->mutex);
+      if (thread->ref->status == THREAD_REF_CANCEL)
+        {
+          thread->ref->status = THREAD_REF_EMPTY;
+          thread->ref->thread = NULL;
+          pthread_mutex_unlock (&thread->ref->mutex);
+          return;
+        }
+      thread->ref->status = THREAD_REF_RUNNING;
+      pthread_mutex_unlock (&thread->ref->mutex);
+    }
+
   GETRUSAGE (&before);
   thread->real = before.real;
 
@@ -1342,6 +1430,18 @@ thread_call (struct thread *thread)
   thread_current = NULL;
 
   GETRUSAGE (&after);
+
+  if (thread->ref)
+    {
+      pthread_mutex_lock (&thread->ref->mutex);
+      if (thread->ref->thread == thread
+          && thread->ref->status == THREAD_REF_RUNNING)
+        {
+          thread->ref->status = THREAD_REF_EMPTY;
+          thread->ref->thread = NULL;
+        }
+      pthread_mutex_unlock (&thread->ref->mutex);
+    }
 
   realtime = thread_consumed_time (&after, &before, &cputime);
   thread->hist->real.total += realtime;

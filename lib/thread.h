@@ -74,6 +74,7 @@ struct thread_master
   struct pollfd *pollfds;
   size_t pollsize;
 
+  pid_t tid;
   unsigned long alloc;
 };
 
@@ -197,6 +198,9 @@ enum quagga_clkid {
 #define THREAD_TIMER_OFF(thread)  THREAD_OFF(thread)
 
 #define debugargdef  const char *funcname, const char *schedfrom, int fromln
+
+#define thread_ref_add_read(m,r,f,a,v) \
+        funcname_thread_add_read        (m,r,f,a,v,#f,__FILE__,__LINE__)
 
 #define thread_add_read(m,f,a,v) \
         funcname_thread_add_read        (m,NULL,f,a,v,#f,__FILE__,__LINE__)
