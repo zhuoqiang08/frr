@@ -24,6 +24,8 @@
 
 #include <zebra.h>
 #include <pthread.h>
+#include "qatomic.h"
+#include "seqlock.h"
 
 struct rusage_t
 {
@@ -69,6 +71,12 @@ struct thread_master
 
 typedef unsigned char thread_type;
 
+struct thread;
+typedef struct thread_ref {
+  _Atomic uint32_t status;
+  struct thread *thread;
+} thread_ref_t;
+
 /* Thread itself. */
 struct thread
 {
@@ -77,6 +85,9 @@ struct thread
   struct thread *next;		/* next pointer of the thread */   
   struct thread *prev;		/* previous pointer of the thread */
   struct thread_master *master;	/* pointer to the struct thread_master. */
+  struct thread * _Atomic next_add;
+  struct thread * _Atomic next_del;
+  thread_ref_t *ref;
   int (*func) (struct thread *); /* event function */
   void *arg;			/* event argument */
   union {
@@ -90,6 +101,13 @@ struct thread
   const char *funcname;
   const char *schedfrom;
   int schedfrom_line;
+};
+
+enum thread_ref_status {
+  REF_INIT = 0,
+  REF_SCHEDQ,
+  REF_RUNNING,
+  REF_CANCEL,
 };
 
 struct cpu_thread_history 
@@ -169,12 +187,18 @@ enum quagga_clkid {
 
 #define debugargdef  const char *funcname, const char *schedfrom, int fromln
 
-#define thread_add_read(m,f,a,v) funcname_thread_add_read(m,f,a,v,#f,__FILE__,__LINE__)
-#define thread_add_write(m,f,a,v) funcname_thread_add_write(m,f,a,v,#f,__FILE__,__LINE__)
-#define thread_add_timer(m,f,a,v) funcname_thread_add_timer(m,f,a,v,#f,__FILE__,__LINE__)
-#define thread_add_timer_msec(m,f,a,v) funcname_thread_add_timer_msec(m,f,a,v,#f,__FILE__,__LINE__)
-#define thread_add_event(m,f,a,v) funcname_thread_add_event(m,f,a,v,#f,__FILE__,__LINE__)
-#define thread_execute(m,f,a,v) funcname_thread_execute(m,f,a,v,#f,__FILE__,__LINE__)
+#define thread_add_read(m,f,a,v) \
+        funcname_thread_add_read        (m,NULL,f,a,v,#f,__FILE__,__LINE__)
+#define thread_add_write(m,f,a,v) \
+        funcname_thread_add_write       (m,NULL,f,a,v,#f,__FILE__,__LINE__)
+#define thread_add_timer(m,f,a,v) \
+        funcname_thread_add_timer       (m,NULL,f,a,v,#f,__FILE__,__LINE__)
+#define thread_add_timer_msec(m,f,a,v) \
+        funcname_thread_add_timer_msec  (m,NULL,f,a,v,#f,__FILE__,__LINE__)
+#define thread_add_event(m,f,a,v) \
+        funcname_thread_add_event       (m,NULL,f,a,v,#f,__FILE__,__LINE__)
+#define thread_execute(m,f,a,v) \
+        funcname_thread_execute         (m,NULL,f,a,v,#f,__FILE__,__LINE__)
 
 /* The 4th arg to thread_add_background is the # of milliseconds to delay. */
 #define thread_add_background(m,f,a,v) funcname_thread_add_background(m,f,a,v,#f,__FILE__,__LINE__)
@@ -185,29 +209,27 @@ extern void thread_master_free (struct thread_master *);
 
 extern struct thread_master *thread_master_fork (void);
 
-extern struct thread *funcname_thread_add_read (struct thread_master *, 
-				                int (*)(struct thread *),
-				                void *, int, debugargdef);
+extern struct thread *funcname_thread_add_read (struct thread_master *,
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *, int, debugargdef);
 extern struct thread *funcname_thread_add_write (struct thread_master *,
-				                 int (*)(struct thread *),
-				                 void *, int, debugargdef);
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *, int, debugargdef);
 extern struct thread *funcname_thread_add_timer (struct thread_master *,
-				                 int (*)(struct thread *),
-				                 void *, long, debugargdef);
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *, long, debugargdef);
 extern struct thread *funcname_thread_add_timer_msec (struct thread_master *,
-				                      int (*)(struct thread *),
-				                      void *, long, debugargdef);
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *, long, debugargdef);
 extern struct thread *funcname_thread_add_event (struct thread_master *,
-				                 int (*)(struct thread *),
-				                 void *, int, debugargdef);
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *, int, debugargdef);
 extern struct thread *funcname_thread_add_background (struct thread_master *,
-                                               int (*func)(struct thread *),
-				               void *arg,
-				               long milliseconds_to_delay,
-					       debugargdef);
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *arg, long milliseconds_to_delay, debugargdef);
 extern struct thread *funcname_thread_execute (struct thread_master *,
-                                               int (*)(struct thread *),
-                                               void *, int, debugargdef);
+                        thread_ref_t *ref, int (*)(struct thread *),
+                        void *, int, debugargdef);
 #undef debugargdef
 
 extern void thread_cancel (struct thread *);

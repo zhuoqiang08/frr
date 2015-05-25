@@ -688,7 +688,7 @@ thread_get (struct thread_master *m, u_char type,
 
 /* Add new read thread. */
 struct thread *
-funcname_thread_add_read (struct thread_master *m, 
+funcname_thread_add_read (struct thread_master *m, thread_ref_t *ref,
 		 int (*func) (struct thread *), void *arg, int fd,
 		 debugargdef)
 {
@@ -712,7 +712,7 @@ funcname_thread_add_read (struct thread_master *m,
 
 /* Add new write thread. */
 struct thread *
-funcname_thread_add_write (struct thread_master *m,
+funcname_thread_add_write (struct thread_master *m, thread_ref_t *ref,
 		 int (*func) (struct thread *), void *arg, int fd,
 		 debugargdef)
 {
@@ -735,7 +735,7 @@ funcname_thread_add_write (struct thread_master *m,
 }
 
 static struct thread *
-funcname_thread_add_timer_timeval (struct thread_master *m,
+funcname_thread_add_timer_timeval (struct thread_master *m, thread_ref_t *ref,
                                    int (*func) (struct thread *), 
                                   int type,
                                   void *arg, 
@@ -767,7 +767,7 @@ funcname_thread_add_timer_timeval (struct thread_master *m,
 
 /* Add timer event thread. */
 struct thread *
-funcname_thread_add_timer (struct thread_master *m,
+funcname_thread_add_timer (struct thread_master *m, thread_ref_t *ref,
 		           int (*func) (struct thread *), 
 		           void *arg, long timer,
 			   debugargdef)
@@ -779,13 +779,13 @@ funcname_thread_add_timer (struct thread_master *m,
   trel.tv_sec = timer;
   trel.tv_usec = 0;
 
-  return funcname_thread_add_timer_timeval (m, func, THREAD_TIMER, arg, 
+  return funcname_thread_add_timer_timeval (m, ref, func, THREAD_TIMER, arg, 
                                             &trel, debugargpass);
 }
 
 /* Add timer event thread with "millisecond" resolution */
 struct thread *
-funcname_thread_add_timer_msec (struct thread_master *m,
+funcname_thread_add_timer_msec (struct thread_master *m, thread_ref_t *ref,
                                 int (*func) (struct thread *), 
                                 void *arg, long timer,
 				debugargdef)
@@ -797,13 +797,13 @@ funcname_thread_add_timer_msec (struct thread_master *m,
   trel.tv_sec = timer / 1000;
   trel.tv_usec = 1000*(timer % 1000);
 
-  return funcname_thread_add_timer_timeval (m, func, THREAD_TIMER, 
+  return funcname_thread_add_timer_timeval (m, ref, func, THREAD_TIMER, 
                                             arg, &trel, debugargpass);
 }
 
 /* Add a background thread, with an optional millisec delay */
 struct thread *
-funcname_thread_add_background (struct thread_master *m,
+funcname_thread_add_background (struct thread_master *m, thread_ref_t *ref,
                                 int (*func) (struct thread *),
                                 void *arg, long delay,
 				debugargdef)
@@ -823,13 +823,13 @@ funcname_thread_add_background (struct thread_master *m,
       trel.tv_usec = 0;
     }
 
-  return funcname_thread_add_timer_timeval (m, func, THREAD_BACKGROUND,
+  return funcname_thread_add_timer_timeval (m, ref, func, THREAD_BACKGROUND,
                                             arg, &trel, debugargpass);
 }
 
 /* Add simple event thread. */
 struct thread *
-funcname_thread_add_event (struct thread_master *m,
+funcname_thread_add_event (struct thread_master *m, thread_ref_t *ref,
 		  int (*func) (struct thread *), void *arg, int val,
 		  debugargdef)
 {
@@ -1278,7 +1278,7 @@ thread_call (struct thread *thread)
 
 /* Execute thread */
 struct thread *
-funcname_thread_execute (struct thread_master *m,
+funcname_thread_execute (struct thread_master *m, thread_ref_t *ref,
                 int (*func)(struct thread *), 
                 void *arg,
                 int val,
