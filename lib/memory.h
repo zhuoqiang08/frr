@@ -143,7 +143,7 @@ extern void *qstrdup (struct memtype *mt, const char *str)
 	__attribute__ ((malloc, nonnull (1) _RET_NONNULL));
 extern void qfree (struct memtype *mt, void *ptr);
 
-#if 0
+#if 1
 #define XMALLOC(mtype, size)		qmalloc(mtype, size)
 #define XCALLOC(mtype, size)		qcalloc(mtype, size)
 #define XREALLOC(mtype, ptr, size)	qrealloc(mtype, ptr, size)
@@ -191,5 +191,7 @@ static inline size_t mtype_stats_alloc(struct memtype *mt)
  * last value from qmem_walk_fn. */
 typedef int qmem_walk_fn (void *arg, struct memgroup *mg, struct memtype *mt);
 extern int qmem_walk (qmem_walk_fn *func, void *arg);
+
+#include "memtypes.h"
 
 #endif /* _QUAGGA_MEMORY_H */
