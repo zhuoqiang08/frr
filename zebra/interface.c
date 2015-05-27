@@ -22,6 +22,8 @@
 
 #include <zebra.h>
 
+#define QUAGGA_OSDEP_NOWARN
+
 #include "if.h"
 #include "vty.h"
 #include "sockunion.h"
@@ -753,6 +755,7 @@ if_dump_vty (struct vty *vty, struct interface *ifp)
            if_flag_dump (ifp->flags), VTY_NEWLINE);
   
   /* Hardware address. */
+#pragma message "needs if_gethwaddr()"
 #ifdef HAVE_STRUCT_SOCKADDR_DL
   sdl = &ifp->sdl;
   if (sdl != NULL && sdl->sdl_alen != 0)

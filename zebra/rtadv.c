@@ -22,6 +22,8 @@
 
 #include <zebra.h>
 
+#define QUAGGA_OSDEP_NOWARN
+
 #include "memory.h"
 #include "zebra_memory.h"
 #include "sockopt.h"
@@ -314,6 +316,7 @@ rtadv_send_packet (int sock, struct interface *ifp)
     }
 
   /* Hardware address. */
+#pragma message "needs if_gethwaddr()"
 #ifdef HAVE_STRUCT_SOCKADDR_DL
   sdl = &ifp->sdl;
   if (sdl != NULL && sdl->sdl_alen != 0)
