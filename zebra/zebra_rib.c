@@ -322,7 +322,7 @@ nexthop_ifname_add (struct rib *rib, char *ifname)
 
   nexthop = XCALLOC (MTYPE_NEXTHOP, sizeof (struct nexthop));
   nexthop->type = NEXTHOP_TYPE_IFNAME;
-  nexthop->ifname = XSTRDUP (0, ifname);
+  nexthop->ifname = XSTRDUP (MTYPE_TMP, ifname);
 
   nexthop_add (rib, nexthop);
 
@@ -387,7 +387,7 @@ nexthop_ipv6_ifname_add (struct rib *rib, struct in6_addr *ipv6,
   nexthop = XCALLOC (MTYPE_NEXTHOP, sizeof (struct nexthop));
   nexthop->type = NEXTHOP_TYPE_IPV6_IFNAME;
   nexthop->gate.ipv6 = *ipv6;
-  nexthop->ifname = XSTRDUP (0, ifname);
+  nexthop->ifname = XSTRDUP (MTYPE_TMP, ifname);
 
   nexthop_add (rib, nexthop);
 
@@ -2592,7 +2592,7 @@ static_add_ipv4_safi (safi_t safi, struct prefix *p, struct in_addr *gate,
   if (gate)
     si->gate.ipv4 = *gate;
   if (ifname)
-    si->gate.ifname = XSTRDUP (0, ifname);
+    si->gate.ifname = XSTRDUP (MTYPE_TMP, ifname);
 
   /* Add new static route information to the tree with sort by
      distance value and gateway address. */
@@ -3137,11 +3137,11 @@ static_add_ipv6 (struct prefix *p, u_char type, struct in6_addr *gate,
       si->ipv6 = *gate;
       break;
     case STATIC_IPV6_IFNAME:
-      si->ifname = XSTRDUP (0, ifname);
+      si->ifname = XSTRDUP (MTYPE_TMP, ifname);
       break;
     case STATIC_IPV6_GATEWAY_IFNAME:
       si->ipv6 = *gate;
-      si->ifname = XSTRDUP (0, ifname);
+      si->ifname = XSTRDUP (MTYPE_TMP, ifname);
       break;
     }
 

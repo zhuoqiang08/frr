@@ -1268,7 +1268,7 @@ zebra_client_create (int sock)
 {
   struct zserv *client;
 
-  client = XCALLOC (0, sizeof (struct zserv));
+  client = XCALLOC (MTYPE_TMP, sizeof (struct zserv));
 
   /* Make client input/output buffer. */
   client->sock = sock;
