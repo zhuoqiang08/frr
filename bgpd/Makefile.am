@@ -11,6 +11,7 @@ noinst_LIBRARIES = libbgp.a
 sbin_PROGRAMS = bgpd
 
 libbgp_a_SOURCES = \
+	bgp_memory.c \
 	bgpd.c bgp_fsm.c bgp_aspath.c bgp_community.c bgp_attr.c \
 	bgp_debug.c bgp_route.c bgp_zebra.c bgp_open.c bgp_routemap.c \
 	bgp_packet.c bgp_network.c bgp_filter.c bgp_regex.c bgp_clist.c \
@@ -18,6 +19,7 @@ libbgp_a_SOURCES = \
 	bgp_damp.c bgp_table.c bgp_advertise.c bgp_vty.c bgp_mpath.c
 
 noinst_HEADERS = \
+	bgp_memory.h \
 	bgp_aspath.h bgp_attr.h bgp_community.h bgp_debug.h bgp_fsm.h \
 	bgp_network.h bgp_open.h bgp_packet.h bgp_regex.h bgp_route.h \
 	bgpd.h bgp_filter.h bgp_clist.h bgp_dump.h bgp_zebra.h \
