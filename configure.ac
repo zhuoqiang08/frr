@@ -297,6 +297,8 @@ AC_ARG_ENABLE(rusage,
   AS_HELP_STRING([--disable-rusage], [disable using getrusage]))
 AC_ARG_ENABLE(gcc_ultra_verbose,
   AS_HELP_STRING([--enable-gcc-ultra-verbose], [enable ultra verbose GCC warnings]))
+AC_ARG_ENABLE(valgrind,
+  AS_HELP_STRING([--enable-valgrind], [enable valgrind debugee-side improvements]))
 AC_ARG_ENABLE(linux24_tcp_md5,
   AS_HELP_STRING([--enable-linux24-tcp-md5], [enable support for old, Linux-2.4 RFC2385 patch]))
 AC_ARG_ENABLE(gcc-rdynamic,
@@ -1315,6 +1317,23 @@ int main(void);
    AH_TEMPLATE([SNMP_SMUX], [Use SNMP SMUX to interface with snmpd])
    AH_TEMPLATE([SNMP_AGENTX], [Use SNMP AgentX to interface with snmpd])
    AC_DEFINE_UNQUOTED(AS_TR_CPP(SNMP_${SNMP_METHOD}),,SNMP method to interface with snmpd)
+fi
+
+dnl --------
+dnl valgrind
+dnl --------
+
+if test "${enable_valgrind}" = "yes"; then
+  PKG_CHECK_MODULES([VALGRIND], [valgrind], [
+    CFLAGS="$CFLAGS $VALGRIND_CFLAGS"
+    LIBS="$LIBS $VALGRIND_LIBS"
+  ], [
+    AC_MSG_FAILURE([Valgrind support requested but not available.])
+  ])
+
+  AC_CHECK_HEADERS([memcheck.h], [], [
+    AC_MSG_FAILURE([Valgrind missing memcheck.h.])
+  ], QUAGGA_INCLUDES)
 fi
 
 dnl ---------------------------

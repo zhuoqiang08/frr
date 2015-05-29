@@ -49,6 +49,12 @@ extern int agentx_enabled;
 #include <mach/mach_time.h>
 #endif
 
+#ifdef HAVE_MEMCHECK_H
+#include <memcheck.h>
+#else
+#define VALGRIND_MAKE_MEM_UNDEFINED(ptr,len) do { } while(0)
+#endif
+
 #include <sys/syscall.h>
 
 /* current execution context */
@@ -587,6 +593,9 @@ thread_add_unuse (struct thread_master *m, struct thread *thread)
   assert (thread->next == NULL);
   assert (thread->prev == NULL);
   assert (thread->type == THREAD_UNUSED);
+  VALGRIND_MAKE_MEM_UNDEFINED((char *)thread, offsetof(struct thread, next));
+  VALGRIND_MAKE_MEM_UNDEFINED((char *)&thread->master,
+                            sizeof(*thread) - offsetof(struct thread, master));
   thread_list_add (&unused, thread);
 }
 
