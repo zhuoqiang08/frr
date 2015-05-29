@@ -21,8 +21,6 @@
 
 #include <zebra.h>
 
-#define QUAGGA_OSDEP_NOWARN
-
 /* Hack for GNU libc version 2. */
 #ifndef MSG_TRUNC
 #define MSG_TRUNC      0x20

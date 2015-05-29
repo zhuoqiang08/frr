@@ -22,8 +22,6 @@
 
 #include <zebra.h>
 
-#define QUAGGA_OSDEP_NOWARN
-
 #include "prefix.h"
 #include "stream.h"
 #include "buffer.h"

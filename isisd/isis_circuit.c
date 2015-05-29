@@ -30,8 +30,6 @@
 #define	ETHER_ADDR_LEN	ETHERADDRL
 #endif
 
-#define QUAGGA_OSDEP_NOWARN
-
 #include "log.h"
 #include "memory.h"
 #include "if.h"
@@ -599,7 +597,6 @@ isis_circuit_up (struct isis_circuit *circuit)
       /*
        * Get the Hardware Address
        */
-#pragma message "needs if_gethwaddr()"
 #ifdef HAVE_STRUCT_SOCKADDR_DL
 #ifndef SUNOS_5
       if (circuit->interface->sdl.sdl_alen != ETHER_ADDR_LEN)

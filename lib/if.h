@@ -105,25 +105,19 @@ struct interface
   unsigned int mtu;    /* IPv4 MTU */
   unsigned int mtu6;   /* IPv6 MTU - probably, but not neccessarily same as mtu */
 
-#ifndef QUAGGA_OSDEP_NOWARN
-#define ATTR_OSDEP_WARN __attribute__((deprecated("OS-specific field")))
-#else
-#define ATTR_OSDEP_WARN
-#endif
-
   /* Hardware address. */
 #ifdef HAVE_STRUCT_SOCKADDR_DL
   union {
     /* note that sdl_storage is never accessed, it only exists to make space.
      * all actual uses refer to sdl - but use sizeof(sdl_storage)!  this fits
      * best with C aliasing rules. */
-    struct sockaddr_dl sdl ATTR_OSDEP_WARN;
-    struct sockaddr_storage sdl_storage ATTR_OSDEP_WARN;
+    struct sockaddr_dl sdl;
+    struct sockaddr_storage sdl_storage;
   };
 #else
-  unsigned short hw_type ATTR_OSDEP_WARN;
-  u_char hw_addr[INTERFACE_HWADDR_MAX] ATTR_OSDEP_WARN;
-  int hw_addr_len ATTR_OSDEP_WARN;
+  unsigned short hw_type;
+  u_char hw_addr[INTERFACE_HWADDR_MAX];
+  int hw_addr_len;
 #endif /* HAVE_STRUCT_SOCKADDR_DL */
 
   /* interface bandwidth, kbits */

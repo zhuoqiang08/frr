@@ -21,8 +21,6 @@
 
 #include <zebra.h>
 
-#define QUAGGA_OSDEP_NOWARN
-
 #include "prefix.h"
 #include "command.h"
 #include "if.h"
