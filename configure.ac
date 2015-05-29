@@ -150,6 +150,8 @@ if test "x${cflags_specified}" = "x" ; then
         AC_C_FLAG([-Wpointer-arith])
         AC_C_FLAG([-Wbad-function-cast])
         AC_C_FLAG([-Wwrite-strings])
+        AC_C_FLAG([-Wattributes])
+        AC_C_FLAG([-Wignored-attributes])
         if test x"${enable_gcc_ultra_verbose}" = x"yes" ; then
           AC_C_FLAG([-Wcast-qual])
           AC_C_FLAG([-Wstrict-prototypes])
