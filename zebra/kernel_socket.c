@@ -26,6 +26,7 @@
 #include "sockunion.h"
 #include "connected.h"
 #include "memory.h"
+#include "zebra_memory.h"
 #include "ioctl.h"
 #include "log.h"
 #include "str.h"
