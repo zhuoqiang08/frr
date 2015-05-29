@@ -465,7 +465,21 @@ int main(int argc, char **argv) {
     AC_MSG_RESULT([yes])
   ], [
     AC_MSG_RESULT([no])
-    AC_MSG_FAILURE([stdatomic.h unavailable and $CC has no __atomic_* builtins])
+
+    AC_MSG_CHECKING([for __sync_* builtins])
+    AC_LINK_IFELSE([AC_LANG_SOURCE([[
+int main(int argc, char **argv) {
+  volatile int i = 1;
+  __sync_fetch_and_sub (&i, 1);
+  return __sync_val_compare_and_swap (&i, 0, 1);
+}
+]])], [
+      AC_DEFINE(HAVE___SYNC, 1, [found __sync builtins])
+      AC_MSG_RESULT([yes])
+    ], [
+      AC_MSG_RESULT([no])
+      AC_MSG_FAILURE([stdatomic.h unavailable and $CC has neither __atomic_* nor __sync_* builtins])
+    ])
   ])
 ])
 

@@ -53,6 +53,43 @@
 #define atomic_exchange(atom, val) \
 	__atomic_exchange_n(atom, val, __ATOMIC_SEQ_CST)
 
+#elif defined(HAVE___SYNC)
+
+#define _Atomic volatile
+
+#define memory_order_relaxed 0
+#define memory_order_consume 0
+#define memory_order_acquire 0
+#define memory_order_release 0
+#define memory_order_acq_rel 0
+#define memory_order_seq_cst 0
+
+#define atomic_load_explicit(ptr, mem) \
+	({ __sync_fetch_and_add((ptr), 0); })
+#define atomic_store_explicit(ptr, val, mem) \
+	({ __sync_synchronize(); *(ptr) = (val); __sync_synchronize(); (void)0; })
+#define atomic_exchange_explicit(ptr, val, mem) \
+	({ typeof(ptr) _ptr = (ptr); typeof(val) _val = (val); \
+	   typeof(*ptr) old1, old2 = __sync_fetch_and_add(_ptr, 0); \
+	   do { \
+		old1 = old2; \
+		old2 = __sync_val_compare_and_swap (_ptr, old1, _val); \
+	   } while (old1 != old2); \
+	   old2; \
+	})
+#define atomic_fetch_add_explicit(ptr, val, mem) \
+	({ __sync_fetch_and_add((ptr), (val)); })
+#define atomic_fetch_sub_explicit(ptr, val, mem) \
+	({ __sync_fetch_and_sub((ptr), (val)); })
+
+#define atomic_compare_exchange_weak_explicit(atom, expect, desire, mem1, mem2) \
+	({ typeof(atom) _atom = (atom); typeof(expect) _expect = (expect); \
+	   typeof(desire) _desire = (desire); \
+	   typeof(*atom) val = __sync_val_compare_and_swap(_atom, *_expect, _desire); \
+	   bool ret = (val == *_expect); *_expect = val; ret; })
+
+#define atomic_exchange(atom, val) atomic_exchange_explicit(atom, val, 0)
+
 #else /* !HAVE___ATOMIC && !HAVE_STDATOMIC_H */
 #error no atomic functions...
 #endif
