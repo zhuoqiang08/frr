@@ -449,6 +449,26 @@ AC_CHECK_HEADERS([stropts.h sys/ksym.h sys/times.h sys/select.h \
 	sys/cdefs.h sys/param.h limits.h signal.h \
 	sys/socket.h netinet/in.h time.h sys/time.h])
 
+AC_DEFINE(TRIED_ATOMIC, 1, [did autoconf checks for atomic])
+AC_CHECK_HEADER([stdatomic.h],[
+  AC_DEFINE(HAVE_STDATOMIC_H, 1, [found stdatomic.h])
+], [
+  AC_MSG_CHECKING([for __atomic_* builtins])
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[
+int main(int argc, char **argv) {
+  volatile int i = 1;
+  __atomic_store_n (&i, 0, __ATOMIC_RELEASE);
+  return __atomic_load_n (&i, __ATOMIC_ACQUIRE);
+}
+]])], [
+    AC_DEFINE(HAVE___ATOMIC, 1, [found __atomic builtins])
+    AC_MSG_RESULT([yes])
+  ], [
+    AC_MSG_RESULT([no])
+    AC_MSG_FAILURE([stdatomic.h unavailable and $CC has no __atomic_* builtins])
+  ])
+])
+
 dnl Utility macro to avoid retyping includes all the time
 m4_define([QUAGGA_INCLUDES],
 [#ifdef SUNOS_5

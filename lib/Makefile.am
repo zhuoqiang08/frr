@@ -22,6 +22,7 @@ libzebra_la_DEPENDENCIES = @LIB_REGEX@
 libzebra_la_LIBADD = @LIB_REGEX@ @LIBCAP@
 
 pkginclude_HEADERS = \
+	qatomic.h \
 	buffer.h checksum.h command.h filter.h getopt.h hash.h \
 	if.h linklist.h log.h \
 	memory.h network.h prefix.h routemap.h distribute.h sockunion.h \
