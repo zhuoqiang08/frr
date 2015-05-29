@@ -139,7 +139,7 @@ if test "x${cflags_specified}" = "x" ; then
         AC_MSG_RESULT([autodetecting])
 
         AC_C_FLAG([-diag-error 10006])
-        AC_C_FLAG([-std=gnu99])
+        AC_C_FLAG([-std=gnu11])
         AC_C_FLAG([-g])
         AC_C_FLAG([-Os], [
           AC_C_FLAG([-O2])
