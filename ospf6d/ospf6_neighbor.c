@@ -181,6 +181,23 @@ static void ospf6_neighbor_state_change(uint8_t next_state,
 			    ospf6_neighbor_state_str[next_state],
 			    ospf6_neighbor_event_string(event));
 
+	if (prev_state == OSPF6_NEIGHBOR_DOWN) {
+		struct ospf6_interface *oi = on->ospf6_if;
+		struct ospf6_ipsec *ipsec = &oi->ipsec;
+
+		/* Outgoing unicast */
+		if (ipsec->proto != IPSEC_DISABLED) {
+			on->ipsec_entry = ospf6_ipsec_install(
+				oi, &on->linklocal_addr, ipsec->proto,
+				ipsec->spi, IPPROTO_OSPFIGP, ipsec->auth_type,
+				ipsec->auth_key, ipsec->enc_type,
+				ipsec->enc_key, 0, 1);
+		}
+	} else if (next_state == OSPF6_NEIGHBOR_DOWN) {
+		if (on->ipsec_entry)
+			ospf6_ipsec_uninstall(on->ospf6_if, on->ipsec_entry);
+	}
+
 	if (prev_state == OSPF6_NEIGHBOR_FULL
 	    || next_state == OSPF6_NEIGHBOR_FULL) {
 		OSPF6_ROUTER_LSA_SCHEDULE(on->ospf6_if->area);

@@ -44,6 +44,7 @@
 #include "ospf6_flood.h"
 #include "ospf6d.h"
 #include "ospf6_bfd.h"
+#include "ospf6_ipsec.h"
 
 struct route_node *route_prev(struct route_node *node)
 {
@@ -86,6 +87,7 @@ static int config_write_ospf6_debug(struct vty *vty)
 	config_write_ospf6_debug_asbr(vty);
 	config_write_ospf6_debug_abr(vty);
 	config_write_ospf6_debug_flood(vty);
+	config_write_ospf6_debug_ipsec(vty);
 
 	return 0;
 }
@@ -1216,6 +1218,7 @@ void ospf6_init(void)
 	prefix_list_delete_hook(ospf6_plist_del);
 
 	ospf6_bfd_init();
+	ospf6_ipsec_init();
 	install_node(&debug_node, config_write_ospf6_debug);
 
 	install_element_ospf6_debug_message();

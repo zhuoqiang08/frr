@@ -88,6 +88,7 @@ vtysh_scan += $(top_srcdir)/ospf6d/ospf6_bfd.c
 vtysh_scan += $(top_srcdir)/ospf6d/ospf6_flood.c
 vtysh_scan += $(top_srcdir)/ospf6d/ospf6_interface.c
 vtysh_scan += $(top_srcdir)/ospf6d/ospf6_intra.c
+vtysh_scan += $(top_srcdir)/ospf6d/ospf6_ipsec.c
 vtysh_scan += $(top_srcdir)/ospf6d/ospf6_lsa.c
 vtysh_scan += $(top_srcdir)/ospf6d/ospf6_message.c
 vtysh_scan += $(top_srcdir)/ospf6d/ospf6_neighbor.c

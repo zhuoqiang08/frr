@@ -31,6 +31,7 @@ lib_libfrr_la_SOURCES = \
 	lib/if_rmap.c \
 	lib/imsg-buffer.c \
 	lib/imsg.c \
+	lib/ipsec.c \
 	lib/jhash.c \
 	lib/json.c \
 	lib/keychain.c \
@@ -113,6 +114,7 @@ pkginclude_HEADERS += \
 	lib/if_rmap.h \
 	lib/imsg.h \
 	lib/ipaddr.h \
+	lib/ipsec.h \
 	lib/jhash.h \
 	lib/json.h \
 	lib/keychain.h \

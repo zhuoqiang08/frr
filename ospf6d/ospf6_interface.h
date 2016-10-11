@@ -24,6 +24,7 @@
 #include "qobj.h"
 #include "hook.h"
 #include "if.h"
+#include "ospf6_ipsec.h"
 
 /* Debug option */
 extern unsigned char conf_debug_ospf6_interface;
@@ -130,6 +131,10 @@ struct ospf6_interface {
 	uint32_t ls_ack_in;
 	uint32_t ls_ack_out;
 	uint32_t discarded;
+
+	/* RFC 4552 authentication */
+	struct ospf6_ipsec ipsec;
+	struct list *ipsec_entries;
 
 	QOBJ_FIELDS
 };

@@ -19,6 +19,7 @@ ospf6d_libospf6_a_SOURCES = \
 	ospf6d/ospf6_flood.c \
 	ospf6d/ospf6_interface.c \
 	ospf6d/ospf6_intra.c \
+	ospf6d/ospf6_ipsec.c \
 	ospf6d/ospf6_lsa.c \
 	ospf6d/ospf6_lsdb.c \
 	ospf6d/ospf6_memory.c \
@@ -33,6 +34,8 @@ ospf6d_libospf6_a_SOURCES = \
 	ospf6d/ospf6d.c \
 	# end
 
+ospf6d/ospf6_ipsec.$(OBJEXT): ospf6d/ospf6_ipsec_clippy.c
+
 noinst_HEADERS += \
 	ospf6d/ospf6_abr.h \
 	ospf6d/ospf6_area.h \
@@ -41,6 +44,7 @@ noinst_HEADERS += \
 	ospf6d/ospf6_flood.h \
 	ospf6d/ospf6_interface.h \
 	ospf6d/ospf6_intra.h \
+	ospf6d/ospf6_ipsec.h \
 	ospf6d/ospf6_lsa.h \
 	ospf6d/ospf6_lsdb.h \
 	ospf6d/ospf6_memory.h \
