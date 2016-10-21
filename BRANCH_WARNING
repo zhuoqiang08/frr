@@ -1,0 +1,14 @@
+WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+***********************************************************************
+
+
+The multithreading in lib/thread.[ch] was not completely done, in fact I was
+aware of a race condition when a quagga-thread/event is running while another
+system-thread tries to delete that specific quagga-thread/event.
+
+I'm not quite sure where exactly it was, I think it was in rescheduling itself
+to run versus the incoming delete (or something like that).  I remember my
+takeway was "shit, I need to change the design again", and I think it was
+indeed a rather annoying problem, but I don't remember the details :(
+
+-David (2016-10-21, looking at the code after 17 months...)
