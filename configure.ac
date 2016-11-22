@@ -1252,17 +1252,6 @@ AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(resolv, res_init)
 
 dnl ---------------------------
-dnl libatomic_ops
-dnl ---------------------------
-
-PKG_CHECK_MODULES([ATOMIC], [atomic_ops], [
-  CFLAGS="$CFLAGS $ATOMIC_CFLAGS"
-  LIBS="$LIBS $ATOMIC_LIBS"
-], [
-  AC_MSG_FAILURE([This version of Quagga needs libatomic_ops])
-])
-
-dnl ---------------------------
 dnl check system has PCRE regexp
 dnl ---------------------------
 if test "x$enable_pcreposix" = "xyes"; then
