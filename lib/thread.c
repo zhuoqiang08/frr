@@ -526,6 +526,9 @@ thread_master_create ()
   return rv;
 }
 
+#ifndef GNU_LINUX
+static _Atomic unsigned tid;
+#endif
 
 /* multithreading */
 static void *thread_master_func (void *arg)
@@ -534,7 +537,11 @@ static void *thread_master_func (void *arg)
   struct thread thread;
 
   thread_current_master = master;
+#ifdef GNU_LINUX
   master->tid = syscall (SYS_gettid);
+#else
+  master->tid = atomic_fetch_add_explicit (&tid, 1, memory_order_relaxed);
+#endif
 
   while (thread_fetch (master, &thread))
     thread_call (&thread);
