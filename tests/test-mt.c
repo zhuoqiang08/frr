@@ -21,7 +21,9 @@
  */
 
 #define _GNU_SOURCE
+#ifdef linux
 #include <sys/syscall.h>
+#endif
 #include "common-cli.h"
 #include "memory.h"
 
@@ -73,7 +75,11 @@ DEFUN(master_show,
 
 static int thread_func (struct thread *thr)
 {
+#ifdef linux
   pid_t tid = syscall (SYS_gettid);
+#else
+  pid_t tid = 0;
+#endif
   fprintf (stderr, "\r\033[K(%ld: %p) running\r\n",
                    (long)tid, (void *)thr);
   return 0;
@@ -115,7 +121,11 @@ struct reader {
 
 static int thread_reader_func (struct thread *thr)
 {
+#ifdef linux
   pid_t tid = syscall (SYS_gettid);
+#else
+  pid_t tid = 0;
+#endif
   struct reader *r = THREAD_ARG (thr);
   char buf[256];
   ssize_t nread = read(r->fd, buf, sizeof(buf) - 1);
