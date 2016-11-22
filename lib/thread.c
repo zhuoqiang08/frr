@@ -1281,7 +1281,6 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
   struct timeval timer_val_bg;
   struct timeval *timer_wait = &timer_val;
   struct timeval *timer_wait_bg;
-  struct timespec timer_wait_ns;
 
   while (1)
     {
@@ -1358,15 +1357,30 @@ thread_fetch (struct thread_master *m, struct thread *fetch)
         }
 #endif
 
+#if defined(HAVE_PPOLL) || defined(HAVE_POLLTS)
+# if !defined(HAVE_PPOLL)
+#  define ppoll pollts
+# endif
       if (timer_wait)
         {
+          struct timespec timer_wait_ns;
           timer_wait_ns.tv_sec = timer_wait->tv_sec;
           timer_wait_ns.tv_nsec = timer_wait->tv_usec * 1000;
-         num = ppoll (m->pollfds, m->pollsize, &timer_wait_ns, NULL);
+          num = ppoll (m->pollfds, m->pollsize, &timer_wait_ns, NULL);
         }
       else
         num = ppoll (m->pollfds, m->pollsize, NULL, NULL);
-      
+#else
+      if (timer_wait)
+        {
+          int timer_wait_ms = timer_wait->tv_sec * 1000
+                            + timer_wait->tv_usec / 1000;
+          num = poll (m->pollfds, m->pollsize, timer_wait_ms);
+        }
+      else
+        num = poll (m->pollfds, m->pollsize, -1);
+#endif
+
       /* Signals should get quick treatment */
       if (num < 0)
         {
