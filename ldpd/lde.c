@@ -398,7 +398,7 @@ lde_dispatch_imsg(struct thread *thread)
 			    imsg.hdr.pid, NULL, 0);
 			break;
 		default:
-			log_debug("%s: unexpected imsg %d", __func__,
+			log_debug("%s: LDE unexpected imsg %d", __func__,
 			    imsg.hdr.type);
 			break;
 		}
@@ -626,7 +626,7 @@ lde_dispatch_parent(struct thread *thread)
 			memcpy(&ldp_debug, imsg.data, sizeof(ldp_debug));
 			break;
 		default:
-			log_debug("%s: unexpected imsg %d", __func__,
+			log_debug("%s: LDE unexpected imsg %d", __func__,
 			    imsg.hdr.type);
 			break;
 		}
@@ -758,8 +758,10 @@ lde_send_change_klabel(struct fec_node *fn, struct fec_nh *fnh)
 		break;
 	case FEC_TYPE_PWID:
 		if (fn->local_label == NO_LABEL ||
-		    fnh->remote_label == NO_LABEL)
+		    fnh->remote_label == NO_LABEL) {
+			zlog_warn("pseudowire no label");
 			return;
+		}
 
 		pw = (struct l2vpn_pw *) fn->data;
 		pw->flags |= F_PW_STATUS_UP;
@@ -775,6 +777,7 @@ lde_send_change_klabel(struct fec_node *fn, struct fec_nh *fnh)
 		kpw.remote_label = fnh->remote_label;
 		kpw.flags = pw->flags;
 
+		fprintf(stderr, "[%ld] send kpw upd msg, ifi=%d, ifi_br=%d\n", (long)getpid(), kpw.ifindex, kpw.ifi_bridge);
 		lde_imsg_compose_parent(IMSG_KPWLABEL_CHANGE, 0, &kpw,
 		    sizeof(kpw));
 		break;

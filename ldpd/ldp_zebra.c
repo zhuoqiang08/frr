@@ -268,6 +268,7 @@ ldp_interface_add(int command, struct zclient *zclient, zebra_size_t length,
 	    ifp->ifindex, ifp->mtu);
 
 	ifp2kif(ifp, &kif);
+	fprintf(stderr, "[%ld] in iface %s idx %d\n", (long)getpid(), kif.ifname, kif.ifindex);
 	main_imsg_compose_both(IMSG_IFSTATUS, &kif, sizeof(kif));
 
 	return (0);
