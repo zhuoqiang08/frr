@@ -544,6 +544,8 @@ struct kroute {
 
 struct kpw {
 	unsigned short		 ifindex;
+	int			 ifi_bridge;
+	unsigned		 wire;
 	int			 pw_type;
 	int			 af;
 	union ldpd_addr		 nexthop;

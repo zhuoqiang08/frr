@@ -140,6 +140,54 @@ zebra_send_mpls_labels(int cmd, struct kroute *kr)
 	return (zclient_send_message(zclient));
 }
 
+static int
+zebra_send_mpls_pw(int cmd, struct kpw *kpw)
+{
+	struct stream		*s;
+
+	if (kpw->local_label < MPLS_LABEL_RESERVED_MAX ||
+	    kpw->remote_label == NO_LABEL) {
+		zlog_warn("pseudowire set to no label");
+		return (0);
+	}
+
+	debug_zebra_out("if %d pw %d type %x nexthop %s labels %s/%s flags %x %s",
+	    kpw->ifindex, kpw->ifi_bridge, kpw->pw_type,
+	    log_addr(kpw->af, &kpw->nexthop),
+	    log_label(kpw->local_label), log_label(kpw->remote_label),
+	    kpw->flags,
+	    (cmd == ZEBRA_MPLS_PW_ADD) ? "add" : "delete");
+
+	/* Reset stream. */
+	s = zclient->obuf;
+	stream_reset(s);
+
+	zclient_create_header(s, cmd, VRF_DEFAULT);
+	stream_putc(s, ZEBRA_LSP_LDP);
+	stream_putl(s, kpw->ifi_bridge);
+	stream_putl(s, kpw->wire);
+	stream_putl(s, kpw->pw_type);
+	stream_putl(s, kpw->af);
+	switch (kpw->af) {
+	case AF_INET:
+		stream_put_in_addr(s, &kpw->nexthop.v4);
+		break;
+	case AF_INET6:
+		stream_write(s, (u_char *)&kpw->nexthop.v6, 16);
+		break;
+	default:
+		fatalx("kpw_change: unknown af");
+	}
+	stream_putl(s, kpw->local_label);
+	stream_putl(s, kpw->remote_label);
+	stream_putl(s, kpw->flags);
+
+	/* Put length at the first point of the stream. */
+	stream_putw_at(s, 0, stream_get_endp(s));
+
+	return (zclient_send_message(zclient));
+}
+
 int
 kr_change(struct kroute *kr)
 {
@@ -155,15 +203,13 @@ kr_delete(struct kroute *kr)
 int
 kmpw_set(struct kpw *kpw)
 {
-	/* TODO */
-	return (0);
+	return (zebra_send_mpls_pw(ZEBRA_MPLS_PW_ADD, kpw));
 }
 
 int
 kmpw_unset(struct kpw *kpw)
 {
-	/* TODO */
-	return (0);
+	return (zebra_send_mpls_pw(ZEBRA_MPLS_PW_DELETE, kpw));
 }
 
 void

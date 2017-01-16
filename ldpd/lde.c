@@ -424,9 +424,11 @@ lde_dispatch_parent(struct thread *thread)
 	struct iface		*iface, *niface;
 	struct tnbr		*ntnbr;
 	struct nbr_params	*nnbrp;
-	static struct l2vpn	*l2vpn, *nl2vpn;
+	static struct l2vpn	*nl2vpn;
+	static l2vpn		*l2vpn;
 	struct l2vpn_if		*lif, *nlif;
 	struct l2vpn_pw		*pw, *npw;
+	struct kif		*kif;
 	struct imsg		 imsg;
 	struct kif		*kif;
 	struct kroute		*kr;
@@ -461,6 +463,11 @@ lde_dispatch_parent(struct thread *thread)
 			if (iface) {
 				if_update_info(iface, kif);
 				break;
+			}
+
+			l2vpn = l2vpn_find_brname(ldeconf, kif->ifname);
+			if (l2vpn) {
+				l2vpn->br_ifindex = kif->ifindex;
 			}
 
 			RB_FOREACH(l2vpn, l2vpn_head, &ldeconf->l2vpn_tree) {
@@ -759,6 +766,8 @@ lde_send_change_klabel(struct fec_node *fn, struct fec_nh *fnh)
 
 		memset(&kpw, 0, sizeof(kpw));
 		kpw.ifindex = pw->ifindex;
+		kpw.ifi_bridge = pw->l2vpn->br_ifindex;
+		kpw.wire = pw->pwid;
 		kpw.pw_type = fn->fec.u.pwid.type;
 		kpw.af = pw->af;
 		kpw.nexthop = pw->addr;
@@ -816,6 +825,8 @@ lde_send_delete_klabel(struct fec_node *fn, struct fec_nh *fnh)
 
 		memset(&kpw, 0, sizeof(kpw));
 		kpw.ifindex = pw->ifindex;
+		kpw.ifi_bridge = pw->l2vpn->br_ifindex;
+		kpw.wire = pw->pwid;
 		kpw.pw_type = fn->fec.u.pwid.type;
 		kpw.af = pw->af;
 		kpw.nexthop = pw->addr;
