@@ -26,6 +26,7 @@ libfrr_la_SOURCES = \
 	ptm_lib.c csv.c bfd.c vrf.c systemd.c ns.c memory.c memory_vty.c \
 	imsg-buffer.c imsg.c skiplist.c \
 	qobj.c wheel.c \
+	znl.c zbuf.c \
 	event_counter.c \
 	grammar_sandbox.c \
 	srcdest_table.c \
@@ -85,7 +86,10 @@ pkginclude_HEADERS = \
 
 noinst_HEADERS = \
 	plist_int.h \
-	log_int.h
+	log_int.h \
+	zbuf.h \
+	znl.h \
+	# end
 
 noinst_PROGRAMS = grammar_sandbox
 
