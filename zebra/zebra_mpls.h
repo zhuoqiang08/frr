@@ -511,4 +511,10 @@ mpls_should_lsps_be_processed(struct zebra_vrf *zvrf)
 /* Global variables. */
 extern int mpls_enabled;
 
+extern int mpls_pw_update(ifindex_t vplsif, unsigned wire,
+                int af, union g_addr *gate,
+                unsigned in_label, unsigned out_label, ifindex_t oif);
+
+extern int mpls_pw_delete(ifindex_t vplsif, unsigned wire);
+
 #endif /*_ZEBRA_MPLS_H */

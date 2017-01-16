@@ -2083,6 +2083,95 @@ zread_label_manager_request (int cmd, struct zserv *client, vrf_id_t vrf_id)
     }
 }
 
+static void
+zread_mpls_pw (int command, struct zserv *client, u_short length,
+		   vrf_id_t vrf_id)
+{
+  struct stream *s;
+  enum lsp_types_t type;
+  union g_addr gate;
+  ifindex_t ifindex;
+  unsigned wire;
+  int pw_type;
+  mpls_label_t in_label, out_label;
+  struct zebra_vrf *zvrf;
+  int af;
+
+  zvrf = vrf_info_lookup (vrf_id);
+  if (!zvrf)
+    return;
+
+  /* Get input stream.  */
+  s = client->ibuf;
+
+  /* Get data. */
+  type = stream_getc (s);
+  ifindex = stream_getl (s);
+  wire = stream_getl (s);
+  pw_type = stream_getl (s);
+
+  af = stream_getl (s);
+  switch (af)
+    {
+    case AF_INET:
+      gate.ipv4.s_addr = stream_get_ipv4 (s);
+      break;
+    case AF_INET6:
+      stream_get (&gate.ipv6, s, 16);
+      break;
+    default:
+      return;
+    }
+  in_label = stream_getl (s);
+  out_label = stream_getl (s);
+  stream_getl (s); /* flags */
+
+  if (! mpls_enabled)
+    return;
+
+  struct route_node *rn = NULL;
+  struct rib *rib = rib_match (family2afi(af), SAFI_UNICAST, vrf_id, &gate, &rn);
+  struct nexthop *nh = rib->nexthop_active_num ? rib->nexthop : NULL;
+  char buf[256];
+
+  if (nh->type == NEXTHOP_TYPE_IPV4) {
+    zlog_warn("PW nexthop IPv4 %s ifi %d lbl %p",
+		    inet_ntop(AF_INET, &nh->gate.ipv4, buf, sizeof(buf)),
+		    nh->ifindex, nh->nh_label);
+  }
+
+  ifindex_t oif = nh->ifindex;
+#if 0
+  switch (nh->type) {
+  case NEXTHOP_TYPE_IFINDEX:
+  case NEXTHOP_TYPE_IPV4_IFINDEX:
+  case NEXTHOP_TYPE_IPV6_IFINDEX:
+    oif = nh->ifindex;
+    break;
+  case NEXTHOP_TYPE_IPV4:
+    command = 0;
+    break;
+  default:
+    zlog_warn("unusable PW nexthop type %d %p", nh->type, nh->resolved);
+    command = 0;
+  }
+#endif
+
+  (void)type;
+  (void)pw_type;
+
+  if (command == ZEBRA_MPLS_PW_ADD)
+    {
+      if (mpls_pw_update (ifindex, wire, af, &gate, in_label, out_label, oif))
+        zlog_warn("mpls_pw_update() failed");
+    }
+  else if (command == ZEBRA_MPLS_PW_DELETE)
+    {
+      if (mpls_pw_delete (ifindex, wire))
+        zlog_warn("mpls_pw_delete() failed");
+    }
+}
+
 /* Cleanup registered nexthops (across VRFs) upon client disconnect. */
 static void
 zebra_client_close_cleanup_rnh (struct zserv *client)
@@ -2418,6 +2507,10 @@ zebra_client_read (struct thread *thread)
       break;
     case ZEBRA_FEC_UNREGISTER:
       zserv_fec_unregister (client, sock, length);
+      break;
+    case ZEBRA_MPLS_PW_ADD:
+    case ZEBRA_MPLS_PW_DELETE:
+      zread_mpls_pw (command, client, length, vrf_id);
       break;
     default:
       zlog_info ("Zebra received unknown command %d", command);
