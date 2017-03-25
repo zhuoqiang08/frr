@@ -7827,12 +7827,11 @@ bgp_show_table (struct vty *vty, struct bgp *bgp, struct bgp_table *table,
               {
                 vty_out (vty, "BGP table version is %" PRIu64 ", local router ID is %s%s", table->version, inet_ntoa (bgp->router_id), VTY_NEWLINE);
                 vty_out (vty, BGP_SHOW_SCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-
-        vty_out(vty, BGP_SHOW_OCODE_HEADER, "", VTY_NEWLINE);
+                vty_out (vty, BGP_SHOW_OCODE_HEADER, "", VTY_NEWLINE);
 #ifdef HAVE_RPKI
-        vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-		vty_out(vty, "%s", VTY_NEWLINE);
+                vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
 #endif
+                vty_out(vty, "%s", VTY_NEWLINE);
 
                 if (type == bgp_show_type_dampend_paths
                     || type == bgp_show_type_damp_neighbor)
@@ -7842,7 +7841,7 @@ bgp_show_table (struct vty *vty, struct bgp *bgp, struct bgp_table *table,
                   vty_out (vty, BGP_SHOW_FLAP_HEADER, VTY_NEWLINE);
                 else
 #ifdef HAVE_RPKI
-			vty_out(vty, " ");
+                  vty_out(vty, " ");
 #endif
                   vty_out (vty, BGP_SHOW_HEADER, VTY_NEWLINE);
                 header = 0;
@@ -9487,10 +9486,10 @@ show_adj_route (struct vty *vty, struct peer *peer, afi_t afi, safi_t safi,
         {
           vty_out (vty, "BGP table version is %" PRIu64 ", local router ID is %s%s", table->version, inet_ntoa (bgp->router_id), VTY_NEWLINE);
           vty_out (vty, BGP_SHOW_SCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-      #ifdef HAVE_RPKI
-      /* Provide RPKI Origin validation headers */
-      vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-      #endif
+#ifdef HAVE_RPKI
+          /* Provide RPKI Origin validation headers */
+          vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
+#endif
           vty_out (vty, BGP_SHOW_OCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
 
           vty_out (vty, "Originating default network 0.0.0.0%s%s",
@@ -9521,10 +9520,10 @@ show_adj_route (struct vty *vty, struct peer *peer, afi_t afi, safi_t safi,
                         {
                           vty_out (vty, "BGP table version is 0, local router ID is %s%s", inet_ntoa (bgp->router_id), VTY_NEWLINE);
                           vty_out (vty, BGP_SHOW_SCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-      #ifdef HAVE_RPKI
-      /* Provide RPKI Origin validation headers */
-      vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-      #endif
+#ifdef HAVE_RPKI
+                          /* Provide RPKI Origin validation headers */
+                          vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
+#endif
                           vty_out (vty, BGP_SHOW_OCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
                         }
                       header1 = 0;
@@ -9569,10 +9568,10 @@ show_adj_route (struct vty *vty, struct peer *peer, afi_t afi, safi_t safi,
                           vty_out (vty, "BGP table version is %" PRIu64 ", local router ID is %s%s", table->version,
                                    inet_ntoa (bgp->router_id), VTY_NEWLINE);
                           vty_out (vty, BGP_SHOW_SCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-      #ifdef HAVE_RPKI
-      /* Provide RPKI Origin validation headers */
-      vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
-      #endif
+#ifdef HAVE_RPKI
+                          /* Provide RPKI Origin validation headers */
+                          vty_out(vty, BGP_SHOW_RPKICODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
+#endif
                           vty_out (vty, BGP_SHOW_OCODE_HEADER, VTY_NEWLINE, VTY_NEWLINE);
                         }
                       header1 = 0;

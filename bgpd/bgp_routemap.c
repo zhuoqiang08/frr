@@ -3602,11 +3602,11 @@ DEFUN (no_match_rpki,
        "prefix is not found \n")
 {
   rpki_set_route_map_active(1);
-  if (strcmp (argv[2]->arg, "valid") == 0)
+  if (strcmp (argv[3]->arg, "valid") == 0)
     return bgp_route_match_delete (vty, vty->index, "rpki", "valid");
-  if (strcmp (argv[2]->arg, "invalid") == 0)
+  if (strcmp (argv[3]->arg, "invalid") == 0)
     return bgp_route_match_delete (vty, vty->index, "rpki", "invalid");
-  if (strcmp (argv[2]->arg, "notfound") == 0)
+  if (strcmp (argv[3]->arg, "notfound") == 0)
     return bgp_route_match_delete (vty, vty->index, "rpki", "notfound");
   return CMD_WARNING;
 }

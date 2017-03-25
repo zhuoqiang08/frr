@@ -7516,12 +7516,11 @@ bgp_config_write (struct vty *vty)
 	  vty_out (vty, "%s", VTY_NEWLINE);
 	}
 
-  if (bgp_flag_check(bgp, BGP_FLAG_VALIDATE_DISABLE)) {
-    vty_out(vty, " bgp bestpath prefix-validate disable%s", VTY_NEWLINE);
-  }
-  if (bgp_flag_check(bgp, BGP_FLAG_DISALLOW_INVALID)) {
-    vty_out(vty, " bgp bestpath prefix-validate disallow-invalid%s", VTY_NEWLINE);
-  }
+      if (bgp_flag_check(bgp, BGP_FLAG_VALIDATE_DISABLE))
+        vty_out(vty, " bgp bestpath prefix-validate disable%s", VTY_NEWLINE);
+      if (bgp_flag_check(bgp, BGP_FLAG_DISALLOW_INVALID))
+        vty_out(vty, " bgp bestpath prefix-validate disallow-invalid%s", VTY_NEWLINE);
+
       /* BGP network import check. */
       if (!bgp_flag_check (bgp, BGP_FLAG_IMPORT_CHECK))
 	vty_out (vty, " no bgp network import-check%s", VTY_NEWLINE);
