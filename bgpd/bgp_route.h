@@ -56,6 +56,7 @@ enum bgp_show_type
                               "h history, * valid, > best, = multipath,%s"\
                 "              i internal, r RIB-failure, S Stale, R Removed%s"
 #define BGP_SHOW_OCODE_HEADER "Origin codes: i - IGP, e - EGP, ? - incomplete%s%s"
+#define BGP_SHOW_RPKICODE_HEADER "RPKI codes: V valid, I invalid, N not found%s%s"
 #define BGP_SHOW_HEADER "   Network          Next Hop            Metric LocPrf Weight Path%s"
 
 /* Ancillary information to struct bgp_info, 
@@ -171,6 +172,8 @@ struct bgp_info
   u_int32_t addpath_rx_id;
   u_int32_t addpath_tx_id;
 
+  /* RPKI Route origin validation status */
+  u_char rpki_validation_status;
 };
 
 /* BGP static route configuration. */

@@ -88,6 +88,7 @@ $ignore{'"address-family vpnv4 [unicast]"'} = "ignore";
 $ignore{'"logical-router (1-65535) ns NAME"'} = "ignore";
 $ignore{'"vrf-policy NAME"' } = "ignore";
 $ignore{'"exit-vrf-policy"' } = "ignore";
+$ignore{'"enable-rpki"'} = "ignore";
 
 my $cli_stomp = 0;
 

@@ -57,7 +57,7 @@ info_TEXINFOS = frr.texi
 frr.pdf: $(info_TEXINFOS) $(figures_pdf) $(frr_TEXINFOS)
 	$(TEXI2PDF) -o "$@" $< || true
 
-frr_TEXINFOS = appendix.texi basic.texi bgpd.texi isisd.texi filter.texi \
+frr_TEXINFOS = appendix.texi basic.texi bgpd.texi rpki.texi isisd.texi filter.texi \
 	vnc.texi \
 	install.texi ipv6.texi kernel.texi main.texi \
 	nhrpd.texi \

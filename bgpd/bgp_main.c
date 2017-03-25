@@ -59,6 +59,10 @@ Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 #include "bgpd/rfapi/rfapi_backend.h"
 #endif
 
+#ifdef HAVE_RPKI
+#include "bgpd/bgp_rpki.h"
+#endif
+
 /* bgpd options, we use GNU getopt library. */
 static const struct option longopts[] = 
 {
@@ -205,6 +209,11 @@ bgp_exit (int status)
 
   /* reverse bgp_attr_init */
   bgp_attr_finish ();
+
+  /* reverse bgp_rpki_init  */
+#ifdef HAVE_RPKI
+  rpki_finish();
+#endif
 
   /* reverse access_list_init */
   access_list_add_hook (NULL);
@@ -424,6 +433,10 @@ main (int argc, char **argv)
 
   /* BGP related initialization.  */
   bgp_init ();
+
+  #ifdef HAVE_RPKI
+  rpki_init();
+  #endif
 
   snprintf (bgpd_di.startinfo, sizeof (bgpd_di.startinfo), ", bgp@%s:%d",
             (bm->address ? bm->address : "<all>"),

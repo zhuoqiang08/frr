@@ -70,6 +70,11 @@ noinst_LIBRARIES = libbgp.a
 sbin_PROGRAMS = bgpd
 bin_PROGRAMS = bgp_btoa
 
+if HAVE_RPKI
+rpkisrc = bgp_rpki.c bgp_rpki_commands.c
+rpkiheader = bgp_rpki.h bgp_rpki_commands.h
+endif
+
 libbgp_a_SOURCES = \
 	bgp_memory.c \
 	bgpd.c bgp_fsm.c bgp_aspath.c bgp_community.c bgp_attr.c \
@@ -80,7 +85,8 @@ libbgp_a_SOURCES = \
 	bgp_damp.c bgp_table.c bgp_advertise.c bgp_vty.c bgp_mpath.c \
 	bgp_nht.c bgp_updgrp.c bgp_updgrp_packet.c bgp_updgrp_adv.c bgp_bfd.c \
 	bgp_encap.c bgp_encap_tlv.c $(BGP_VNC_RFAPI_SRC) bgp_attr_evpn.c \
-	bgp_evpn.c bgp_evpn_vty.c bgp_vpn.c
+	bgp_evpn.c bgp_evpn_vty.c bgp_vpn.c \
+	$(rpkisrc)
 
 noinst_HEADERS = \
 	bgp_memory.h \
@@ -91,7 +97,8 @@ noinst_HEADERS = \
 	bgp_mplsvpn.h bgp_nexthop.h bgp_damp.h bgp_table.h \
 	bgp_advertise.h bgp_snmp.h bgp_vty.h bgp_mpath.h bgp_nht.h \
 	bgp_updgrp.h bgp_bfd.h bgp_encap.h bgp_encap_tlv.h bgp_encap_types.h \
-	$(BGP_VNC_RFAPI_HD) bgp_attr_evpn.h bgp_evpn.h bgp_evpn_vty.h bgp_vpn.h
+	$(BGP_VNC_RFAPI_HD) bgp_attr_evpn.h bgp_evpn.h bgp_evpn_vty.h bgp_vpn.h \
+	$(rpkiheader)
 
 bgpd_SOURCES = bgp_main.c
 bgpd_LDADD = libbgp.a  $(BGP_VNC_RFP_LIB) ../lib/libfrr.la @LIBCAP@ @LIBM@

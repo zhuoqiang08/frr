@@ -58,6 +58,7 @@ Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 #if ENABLE_BGP_VNC
 # include "bgpd/rfapi/bgp_rfapi_cfg.h"
 #endif
+#include "bgpd/bgp_rpki.h"
 
 /* Memo of route-map commands.
 
@@ -3570,6 +3571,47 @@ DEFUN (no_match_origin,
 				 RMAP_EVENT_MATCH_DELETED);
 }
 
+#ifdef HAVE_RPKI
+DEFUN (match_rpki,
+       match_rpki_cmd,
+       "match rpki <valid|invalid|notfound>",
+       MATCH_STR
+       "Match rpki prefix status\n"
+       "prefix is valid \n"
+       "prefix is invalid \n"
+       "prefix is not found \n")
+{
+  rpki_set_route_map_active(1);
+  if (strcmp (argv[2]->arg, "valid") == 0)
+    return bgp_route_match_add (vty, vty->index, "rpki", "valid");
+  if (strcmp (argv[2]->arg, "invalid") == 0)
+    return bgp_route_match_add (vty, vty->index, "rpki", "invalid");
+  if (strcmp (argv[2]->arg, "notfound") == 0)
+    return bgp_route_match_add (vty, vty->index, "rpki", "notfound");
+  return CMD_WARNING;
+}
+
+DEFUN (no_match_rpki,
+       no_match_rpki_cmd,
+       "no match rpki <valid|invalid|notfound>",
+       NO_STR
+       MATCH_STR
+       "Match rpki prefix status\n"
+       "prefix is valid \n"
+       "prefix is invalid \n"
+       "prefix is not found \n")
+{
+  rpki_set_route_map_active(1);
+  if (strcmp (argv[2]->arg, "valid") == 0)
+    return bgp_route_match_delete (vty, vty->index, "rpki", "valid");
+  if (strcmp (argv[2]->arg, "invalid") == 0)
+    return bgp_route_match_delete (vty, vty->index, "rpki", "invalid");
+  if (strcmp (argv[2]->arg, "notfound") == 0)
+    return bgp_route_match_delete (vty, vty->index, "rpki", "notfound");
+  return CMD_WARNING;
+}
+#endif
+
 DEFUN (set_ip_nexthop_peer,
        set_ip_nexthop_peer_cmd,
        "set ip next-hop peer-address",
@@ -4588,6 +4630,11 @@ bgp_route_map_init (void)
   install_element (RMAP_NODE, &no_match_origin_cmd);
   install_element (RMAP_NODE, &match_probability_cmd);
   install_element (RMAP_NODE, &no_match_probability_cmd);
+
+#ifdef HAVE_RPKI
+  install_element (RMAP_NODE, &match_rpki_cmd);
+  install_element (RMAP_NODE, &no_match_rpki_cmd);
+#endif
 
   install_element (RMAP_NODE, &set_ip_nexthop_peer_cmd);
   install_element (RMAP_NODE, &set_ip_nexthop_unchanged_cmd);

@@ -288,6 +288,9 @@ AC_ARG_ENABLE([protobuf],
   AS_HELP_STRING([--enable-protobuf], [Enable experimental protobuf support]))
 AC_ARG_ENABLE([oldvpn_commands],
   AS_HELP_STRING([--enable-old-vpn-commands], [Keep old vpn commands]))
+AC_ARG_ENABLE(rpki,
+  AS_HELP_STRING([--enable-rpki],  [enable RPKI prefix validation support]))
+
 
 AC_CHECK_HEADERS(json-c/json.h)
 AC_CHECK_LIB(json-c, json_object_get, LIBS="$LIBS -ljson-c")
@@ -1654,6 +1657,32 @@ done
 AC_SUBST(CFG_SYSCONF)
 AC_SUBST(CFG_SBIN)
 AC_SUBST(CFG_STATE)
+
+dnl ------------------------------------
+dnl Enable RPKI and add librtr to libs
+dnl ------------------------------------
+if test "${enable_rpki}" = "yes"; then
+  PKG_CHECK_MODULES(RTRLIB,[rtrlib >= 0.3.6],
+      [AC_DEFINE(HAVE_RPKI,1,Enable RPKI prefix validation for BGP)
+      RPKI=true
+      LIBS="$LIBS $RTRLIB_LIBS"
+      CFLAGS="$CFLAGS $RTRLIB_CFLAGS"],
+    [RPKI=false 
+    AC_MSG_ERROR([librtr was not found on your system, which is needed by rpki prefix
+    validation.])])
+fi
+AM_CONDITIONAL([HAVE_RPKI], test "x$RPKI" = "xtrue")
+
+dnl ------------------------------------------
+dnl Check whether rtrlib was build with ssh support
+dnl ------------------------------------------
+AC_MSG_CHECKING([whether the RTR Library is compiled with SSH])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include "rtrlib/rtrlib.h"]],
+  			[[struct tr_ssh_config config;]])],
+	[AC_MSG_RESULT(yes)
+	AC_DEFINE(FOUND_SSH,,found_ssh)],
+	AC_MSG_RESULT(no)
+)
 
 dnl ---------------------------
 dnl Check htonl works correctly

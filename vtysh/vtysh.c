@@ -869,6 +869,12 @@ static struct cmd_node bgp_node =
   "%s(config-router)# ",
 };
 
+static struct cmd_node rpki_node =
+{
+  RPKI_NODE,
+  "%s(config-router)# ",
+};
+
 static struct cmd_node rip_node =
 {
   RIP_NODE,
@@ -1093,6 +1099,17 @@ DEFUNSH (VTYSH_REALLYALL,
 	 "End current mode and change to enable mode\n")
 {
   return vtysh_end ();
+}
+
+DEFUNSH (VTYSH_BGPD,
+    enable_rpki,
+    enable_rpki_cmd,
+    "enable-rpki",
+    BGP_STR
+    "Enable rpki and enter rpki configuration mode\n")
+{
+  vty->node = RPKI_NODE;
+  return CMD_SUCCESS;
 }
 
 DEFUNSH (VTYSH_BGPD,
@@ -1522,6 +1539,7 @@ vtysh_exit (struct vty *vty)
     case RMAP_NODE:
     case VTY_NODE:
     case KEYCHAIN_NODE:
+    case RPKI_NODE:
       vtysh_execute("end");
       vtysh_execute("configure terminal");
       vty->node = CONFIG_NODE;
@@ -1785,6 +1803,21 @@ DEFUNSH (VTYSH_ALL,
 {
   return vtysh_exit_line_vty (self, vty, argc, argv);
 }
+
+DEFUNSH (VTYSH_BGPD,
+	 vtysh_exit_rpki,
+	 vtysh_exit_rpki_cmd,
+	 "exit",
+	 "Exit rpki configuration and restart rpki session\n")
+{
+  return vtysh_exit (vty);
+}
+
+ALIAS (vtysh_exit_rpki,
+       vtysh_quit_rpki_cmd,
+       "quit",
+       "Exit rpki configuration and restart rpki session\n")
+
 
 DEFUNSH (VTYSH_INTERFACE,
 	 vtysh_interface,
@@ -3097,6 +3130,7 @@ vtysh_init_vty (void)
 
   /* Install nodes. */
   install_node (&bgp_node, NULL);
+  install_node (&rpki_node, NULL);
   install_node (&rip_node, NULL);
   install_node (&interface_node, NULL);
   install_node (&link_params_node, NULL);
@@ -3171,6 +3205,7 @@ vtysh_init_vty (void)
   vtysh_install_default (KEYCHAIN_NODE);
   vtysh_install_default (KEYCHAIN_KEY_NODE);
   vtysh_install_default (VTY_NODE);
+  vtysh_install_default (RPKI_NODE);
 
   install_element (VIEW_NODE, &vtysh_enable_cmd);
   install_element (ENABLE_NODE, &vtysh_config_terminal_cmd);
@@ -3244,6 +3279,8 @@ vtysh_init_vty (void)
   install_element (RMAP_NODE, &vtysh_quit_rmap_cmd);
   install_element (VTY_NODE, &vtysh_exit_line_vty_cmd);
   install_element (VTY_NODE, &vtysh_quit_line_vty_cmd);
+  install_element (RPKI_NODE, &vtysh_exit_rpki_cmd);
+  install_element (RPKI_NODE, &vtysh_quit_rpki_cmd);
 
   /* "end" command. */
   install_element (CONFIG_NODE, &vtysh_end_all_cmd);
@@ -3278,6 +3315,7 @@ vtysh_init_vty (void)
   install_element (KEYCHAIN_KEY_NODE, &vtysh_end_all_cmd);
   install_element (RMAP_NODE, &vtysh_end_all_cmd);
   install_element (VTY_NODE, &vtysh_end_all_cmd);
+  install_element (RPKI_NODE, &vtysh_end_all_cmd);
 
   install_element (INTERFACE_NODE, &vtysh_interface_desc_cmd);
   install_element (INTERFACE_NODE, &vtysh_no_interface_desc_cmd);
@@ -3313,6 +3351,7 @@ vtysh_init_vty (void)
 #endif
   install_element (CONFIG_NODE, &router_isis_cmd);
   install_element (CONFIG_NODE, &router_bgp_cmd);
+  install_element (CONFIG_NODE, &enable_rpki_cmd);
   install_element (BGP_NODE, &address_family_vpnv4_cmd);
   install_element (BGP_NODE, &address_family_vpnv6_cmd);
   install_element (BGP_NODE, &address_family_encapv4_cmd);
