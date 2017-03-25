@@ -1717,6 +1717,7 @@ bgp_best_selection (struct bgp *bgp, struct bgp_node *rn,
 #endif
             new_select = ri;
         }
+    }
 
   /* Now that we know which path is the bestpath see if any of the other paths
    * qualify as multipaths

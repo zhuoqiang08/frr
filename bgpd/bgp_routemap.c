@@ -3583,11 +3583,14 @@ DEFUN (match_rpki,
 {
   rpki_set_route_map_active(1);
   if (strcmp (argv[2]->arg, "valid") == 0)
-    return bgp_route_match_add (vty, vty->index, "rpki", "valid");
+    return bgp_route_match_add (vty, "rpki", "valid",
+                                RMAP_EVENT_MATCH_ADDED);
   if (strcmp (argv[2]->arg, "invalid") == 0)
-    return bgp_route_match_add (vty, vty->index, "rpki", "invalid");
+    return bgp_route_match_add (vty, "rpki", "invalid",
+                                RMAP_EVENT_MATCH_ADDED);
   if (strcmp (argv[2]->arg, "notfound") == 0)
-    return bgp_route_match_add (vty, vty->index, "rpki", "notfound");
+    return bgp_route_match_add (vty, "rpki", "notfound",
+                                RMAP_EVENT_MATCH_ADDED);
   return CMD_WARNING;
 }
 
@@ -3603,11 +3606,14 @@ DEFUN (no_match_rpki,
 {
   rpki_set_route_map_active(1);
   if (strcmp (argv[3]->arg, "valid") == 0)
-    return bgp_route_match_delete (vty, vty->index, "rpki", "valid");
+    return bgp_route_match_delete (vty, "rpki", "valid",
+                                   RMAP_EVENT_MATCH_DELETED);
   if (strcmp (argv[3]->arg, "invalid") == 0)
-    return bgp_route_match_delete (vty, vty->index, "rpki", "invalid");
+    return bgp_route_match_delete (vty, "rpki", "invalid",
+                                   RMAP_EVENT_MATCH_DELETED);
   if (strcmp (argv[3]->arg, "notfound") == 0)
-    return bgp_route_match_delete (vty, vty->index, "rpki", "notfound");
+    return bgp_route_match_delete (vty, "rpki", "notfound",
+                                   RMAP_EVENT_MATCH_DELETED);
   return CMD_WARNING;
 }
 #endif
