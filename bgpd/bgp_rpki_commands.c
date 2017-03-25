@@ -460,17 +460,17 @@ DEFUN (rpki_polling_period,
     "Set polling period\n"
     "Polling period value\n")
 {
-  if (argc != 1)
+  if (argc != 3)
     {
       return CMD_ERR_INCOMPLETE;
     }
-  VTY_GET_INTEGER_RANGE("polling_period", polling_period, argv[0], 1, 86400);
+  VTY_GET_INTEGER_RANGE("polling_period", polling_period, argv[2]->arg, 1, 86400);
   return CMD_SUCCESS;
 }
 
 DEFUN (no_rpki_polling_period,
     no_rpki_polling_period_cmd,
-    "no rpki polling_period ",
+    "no rpki polling_period",
     NO_STR
     RPKI_OUTPUT_STRING
     "Set polling period back to default\n")
@@ -486,12 +486,12 @@ DEFUN (rpki_expire_interval,
     "Set expire interval\n"
     "Expire interval value\n")
 {
-  if (argc != 1)
+  if (argc != 3)
     {
       return CMD_ERR_INCOMPLETE;
     }
   unsigned int tmp;
-  VTY_GET_INTEGER_RANGE("expire_interval", tmp, argv[0], 600, 172800);
+  VTY_GET_INTEGER_RANGE("expire_interval", tmp, argv[2]->arg, 600, 172800);
   if (tmp >= polling_period){
       expire_interval = tmp;
       return CMD_SUCCESS;
@@ -518,11 +518,11 @@ DEFUN (rpki_timeout,
     "Set timeout\n"
     "Timeout value\n")
 {
-  if (argc != 1)
+  if (argc != 3)
     {
       return CMD_ERR_INCOMPLETE;
     }
-  VTY_GET_INTEGER("timeout", timeout, argv[0]);
+  VTY_GET_INTEGER("timeout", timeout, argv[2]->arg);
   return CMD_SUCCESS;
 }
 
@@ -544,11 +544,11 @@ DEFUN (rpki_synchronisation_timeout,
     "Set a timeout for the initial synchronisation of prefix validation data\n"
     "Timeout value\n")
 {
-  if (argc != 1)
+  if (argc != 3)
     {
       return CMD_ERR_INCOMPLETE;
     }
-  VTY_GET_INTEGER("timeout", initial_synchronisation_timeout, argv[0]);
+  VTY_GET_INTEGER("timeout", initial_synchronisation_timeout, argv[2]->arg);
   return CMD_SUCCESS;
 }
 
@@ -565,18 +565,18 @@ DEFUN (no_rpki_synchronisation_timeout,
 
 DEFUN (rpki_group,
     rpki_group_cmd,
-    "rpki group PREFERENCE",
+    "rpki group (0-4294967295)",
     RPKI_OUTPUT_STRING
     "Select an existing or start a new group of cache servers\n"
     "Preference Value for this group (lower value means higher preference)\n")
 {
   int group_preference;
   cache_group* new_cache_group;
-  if (argc != 1)
+  if (argc != 3)
     {
       return CMD_ERR_INCOMPLETE;
     }
-  VTY_GET_INTEGER("group preference", group_preference, argv[0]);
+  VTY_GET_INTEGER("group preference", group_preference, argv[2]->arg);
   // Select group for further configuration
   currently_selected_cache_group = find_cache_group(group_preference);
   
@@ -597,7 +597,7 @@ DEFUN (rpki_group,
 
 DEFUN (no_rpki_group,
     no_rpki_group_cmd,
-    "no rpki group PREFERENCE",
+    "no rpki group (0-4294967295)",
     NO_STR
     RPKI_OUTPUT_STRING
     "Remove a group of cache servers\n"
@@ -605,11 +605,11 @@ DEFUN (no_rpki_group,
 {
   int group_preference;
   cache_group* cache_group;
-  if (argc != 1)
+  if (argc != 3)
     {
       return CMD_ERR_INCOMPLETE;
     }
-  VTY_GET_INTEGER("group preference", group_preference, argv[0]);
+  VTY_GET_INTEGER("group preference", group_preference, argv[2]->arg);
   cache_group = find_cache_group(group_preference);
   if (cache_group == NULL )
     {
@@ -624,7 +624,7 @@ DEFUN (no_rpki_group,
 
 DEFUN (rpki_cache,
     rpki_cache_cmd,
-    "rpki cache (A.B.C.D|WORD) PORT [SSH_UNAME] [SSH_PRIVKEY] [SSH_PUBKEY] [SERVER_PUBKEY]",
+    "rpki cache <A.B.C.D|WORD> PORT [SSH_UNAME SSH_PRIVKEY SSH_PUBKEY [SERVER_PUBKEY]]",
     RPKI_OUTPUT_STRING
     "Install a cache server to current group\n"
     "IP address of cache server\n Hostname of cache server\n"
@@ -647,35 +647,35 @@ DEFUN (rpki_cache,
       return CMD_WARNING;
     }
   // use ssh connection
-  if (argc == 5)
+  if (argc == 7)
     {	    
       // return_value is ERROR on default if
       // there is no SSH support. Unexpected behavior!!!
       return_value = ERROR;
 #if defined(FOUND_SSH)
       int port;
-      VTY_GET_INTEGER("rpki cache ssh port", port, argv[1]);
+      VTY_GET_INTEGER("rpki cache ssh port", port, argv[3]->arg);
       return_value = add_ssh_cache(
-          currently_selected_cache_group->cache_config_list, argv[0], port,
-          argv[2], argv[3], argv[4], NULL );
+          currently_selected_cache_group->cache_config_list, argv[2]->arg, port,
+          argv[4]->arg, argv[5]->arg, argv[6]->arg, NULL );
 #endif
     }
-  else if (argc == 6)
+  else if (argc == 8)
     {
       return_value = ERROR;
 #if defined(FOUND_SSH)
       unsigned int port;
-      VTY_GET_INTEGER("rpki cache ssh port", port, argv[1]);
+      VTY_GET_INTEGER("rpki cache ssh port", port, argv[3]->arg);
       return_value = add_ssh_cache(
-          currently_selected_cache_group->cache_config_list, argv[0], port,
-          argv[2], argv[3], argv[4], argv[5]);
+          currently_selected_cache_group->cache_config_list, argv[2]->arg, port,
+          argv[4]->arg, argv[5]->arg, argv[6]->arg, argv[7]->arg);
 #endif
     }
   // use tcp connection
-  else if (argc == 2)
+  else if (argc == 4)
     {
       return_value = add_tcp_cache(
-          currently_selected_cache_group->cache_config_list, argv[0], argv[1]);
+          currently_selected_cache_group->cache_config_list, argv[2]->arg, argv[3]->arg);
     }
   else
     {
@@ -692,7 +692,7 @@ DEFUN (rpki_cache,
 
 DEFUN (no_rpki_cache,
     no_rpki_cache_cmd,
-    "no rpki cache (A.B.C.D|WORD) [PORT]",
+    "no rpki cache <A.B.C.D|WORD> [PORT]",
     NO_STR
     RPKI_OUTPUT_STRING
     "Remove a cache server from current group\n"
@@ -712,16 +712,16 @@ DEFUN (no_rpki_cache,
   if (argc == 2)
     {
       unsigned int port;
-      VTY_GET_INTEGER("rpki cache port", port, argv[1]);
+      VTY_GET_INTEGER("rpki cache port", port, argv[4]->arg);
       const unsigned int const_port = port;
       cache = find_cache(currently_selected_cache_group->cache_config_list,
-          argv[0], argv[1], const_port);
+          argv[3]->arg, argv[4]->arg, const_port);
 
     }
   else if (argc == 1)
     {
       cache = find_cache(currently_selected_cache_group->cache_config_list,
-          argv[0], NULL, 0);
+          argv[3]->arg, NULL, 0);
 
     }
   else
@@ -730,7 +730,7 @@ DEFUN (no_rpki_cache,
     }
   if (cache == NULL )
     {
-      vty_out(vty, "Cannot find cache %s%s", argv[0], VTY_NEWLINE);
+      vty_out(vty, "Cannot find cache %s%s", argv[3]->arg, VTY_NEWLINE);
       return CMD_WARNING;
     }
   cache->delete_flag = 1;
@@ -746,7 +746,7 @@ DEFUN (bgp_bestpath_prefix_validate_disable,
        "Prefix validation attribute\n"
        "Disable prefix validation\n")
 {
-  struct bgp *bgp = vty->index;
+  VTY_DECLVAR_CONTEXT(bgp, bgp);
   bgp_flag_set(bgp, BGP_FLAG_VALIDATE_DISABLE);
   reprocess_routes(bgp);
   return CMD_SUCCESS;
@@ -761,7 +761,7 @@ DEFUN (no_bgp_bestpath_prefix_validate_disable,
        "Prefix validation attribute\n"
        "Disable prefix validation\n")
 {
-  struct bgp *bgp = vty->index;
+  VTY_DECLVAR_CONTEXT(bgp, bgp);
   bgp_flag_unset (bgp, BGP_FLAG_VALIDATE_DISABLE);
   reprocess_routes(bgp);
   return CMD_SUCCESS;
@@ -775,7 +775,7 @@ DEFUN (bgp_bestpath_prefix_validate_disallow_invalid,
        "Prefix validation attribute\n"
        "Disallow routes to be selected as bestpath if their prefix validation status is invalid\n")
 {
-  struct bgp *bgp = vty->index;
+  VTY_DECLVAR_CONTEXT(bgp, bgp);
   bgp_flag_set (bgp, BGP_FLAG_DISALLOW_INVALID);
   reprocess_routes(bgp);
   return CMD_SUCCESS;
@@ -790,7 +790,7 @@ DEFUN (no_bgp_bestpath_prefix_validate_disallow_invalid,
        "Prefix validation attribute\n"
        "Allow routes to be selected as bestpath even if their prefix validation status is invalid\n")
 {
-  struct bgp *bgp = vty->index;
+  VTY_DECLVAR_CONTEXT(bgp, bgp);
   bgp_flag_unset (bgp, BGP_FLAG_DISALLOW_INVALID);
   reprocess_routes(bgp);
   return CMD_SUCCESS;
@@ -1136,8 +1136,6 @@ install_cli_commands()
   /* Install show commands */
   install_element(VIEW_NODE, &show_rpki_prefix_table_cmd);
   install_element(VIEW_NODE, &show_rpki_cache_connection_cmd);
-  install_element(RESTRICTED_NODE, &show_rpki_prefix_table_cmd);
-  install_element(RESTRICTED_NODE, &show_rpki_cache_connection_cmd);
   install_element(ENABLE_NODE, &show_rpki_prefix_table_cmd);
   install_element(ENABLE_NODE, &show_rpki_cache_connection_cmd);
 
