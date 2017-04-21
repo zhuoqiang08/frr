@@ -132,7 +132,7 @@ apps:
             - network-bind
             - network-control
     ldpd-debug:
-        command: sbin/ldpd -f $SNAP_DATA/pimd.conf --pid_file $SNAP_DATA/pimd.pid --socket $SNAP_DATA/zsock --ctl_socket $SNAP_DATA --vty_socket $SNAP_DATA
+        command: sbin/ldpd -f $SNAP_DATA/ldpd.conf --pid_file $SNAP_DATA/ldpd.pid --socket $SNAP_DATA/zsock --ctl_socket $SNAP_DATA --vty_socket $SNAP_DATA
         plugs:
             - network
             - network-bind
@@ -148,7 +148,6 @@ parts:
            - gawk
            - libreadline-dev
            - texinfo
-           - dejagnu
            - libncurses5-dev
            - texlive-latex-base
            - texlive-generic-recommended
