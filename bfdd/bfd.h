@@ -441,8 +441,8 @@ enum blog_level {
 	BLOG_FATAL = 4,   /* LOG_CRIT */
 };
 
-void log_init(int foreground, enum blog_level level,
-	      struct frr_daemon_info *fdi);
+void log_init(int foreground, enum blog_level level);
+
 void log_info(const char *fmt, ...);
 void log_debug(const char *fmt, ...);
 void log_warning(const char *fmt, ...);

@@ -25,6 +25,7 @@
 #include "bfd.h"
 #include "bfdd_nb.h"
 #include "lib/version.h"
+#include "lib/command.h"
 
 
 /*
@@ -216,14 +217,14 @@ int main(int argc, char *argv[])
 	parse_config(conf);
 #endif
 
+	/* Initialize FRR infrastructure. */
+	master = frr_init();
+
 	/* Initialize logging API. */
-	log_init(1, BLOG_DEBUG, &bfdd_di);
+	log_init(1, BLOG_DEBUG);
 
 	/* Initialize control socket. */
 	control_init(ctl_path);
-
-	/* Initialize FRR infrastructure. */
-	master = frr_init();
 
 	/* Initialize BFD data structures. */
 	bfd_initialize();

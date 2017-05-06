@@ -27,22 +27,16 @@
 
 #include "bfd.h"
 
-#include "lib/log_int.h"
-
 void log_msg(int level, const char *fmt, va_list vl);
 
 
 static int log_fg;
 static int log_level = BLOG_DEBUG;
 
-void log_init(int foreground, enum blog_level level,
-	      struct frr_daemon_info *fdi)
+void log_init(int foreground, enum blog_level level)
 {
 	log_fg = foreground;
 	log_level = level;
-
-	openzlog(fdi->progname, fdi->logname, 0,
-		 LOG_CONS | LOG_NDELAY | LOG_PID, LOG_DAEMON);
 }
 
 void log_msg(int level, const char *fmt, va_list vl)

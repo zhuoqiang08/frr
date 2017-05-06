@@ -307,8 +307,8 @@ main(int argc, char *argv[])
 	}
 
 	if (lflag || eflag)
-		openzlog(ldpd_di.progname, "LDP", 0,
-		         LOG_CONS | LOG_NDELAY | LOG_PID, LOG_DAEMON);
+		/* XXX TODO XXX get uid/gid */
+		zlog_init(ldpd_di.progname, "LDP", 0, -1, -1);
 	if (lflag)
 		lde();
 	else if (eflag)
