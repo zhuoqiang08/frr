@@ -96,6 +96,7 @@ lib_libfrr_la_SOURCES = \
 	lib/yang_translator.c \
 	lib/yang_wrappers.c \
 	lib/zclient.c \
+	lib/zlog.c \
 	lib/logicalrouter.c \
 	lib/printf/printf-pos.c \
 	lib/printf/vfprintf.c \
@@ -243,6 +244,7 @@ pkginclude_HEADERS += \
 	lib/zassert.h \
 	lib/zclient.h \
 	lib/zebra.h \
+	lib/zlog.h \
 	lib/logicalrouter.h \
 	lib/pbr.h \
 	# end

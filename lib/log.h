@@ -22,20 +22,20 @@
 #ifndef _ZEBRA_LOG_H
 #define _ZEBRA_LOG_H
 
+#include "zassert.h"
+
 #include <syslog.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
+
 #include "lib/hook.h"
+#include "lib/zlog.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Hook for external logging function */
-DECLARE_HOOK(zebra_ext_log, (int priority, const char *format, va_list args),
-	     (priority, format, args));
 
 /* Here is some guidance on logging levels to use:
  *
@@ -81,6 +81,7 @@ extern void openzlog(const char *progname, const char *protoname,
 /* Close zlog function. */
 extern void closezlog(void);
 
+#if 0
 /* Handy zlog functions. */
 extern void zlog_err(const char *format, ...) PRINTFRR(1, 2);
 extern void zlog_warn(const char *format, ...) PRINTFRR(1, 2);
@@ -88,6 +89,7 @@ extern void zlog_info(const char *format, ...) PRINTFRR(1, 2);
 extern void zlog_notice(const char *format, ...) PRINTFRR(1, 2);
 extern void zlog_debug(const char *format, ...) PRINTFRR(1, 2);
 extern void zlog(int priority, const char *format, ...) PRINTFRR(2, 3);
+#endif
 
 /* For logs which have error codes associated with them */
 #define flog_err(ferr_id, format, ...)                                        \
@@ -107,6 +109,7 @@ extern void zlog_thread_info(int log_level);
    or zlog_reset_file instead). */
 extern void zlog_set_level(zlog_dest_t, int log_level);
 
+#if 0
 /* Set logging to the given filename at the specified level. */
 extern int zlog_set_file(const char *filename, int log_level);
 /* Disable file logging. */
@@ -114,6 +117,7 @@ extern int zlog_reset_file(void);
 
 /* Rotate log. */
 extern int zlog_rotate(void);
+#endif
 
 #define ZLOG_FILTERS_MAX 100      /* Max # of filters at once */
 #define ZLOG_FILTER_LENGTH_MAX 80 /* 80 character filter limit */

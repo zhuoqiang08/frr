@@ -496,6 +496,50 @@ static char *zencrypt(const char *passwd)
 	return crypt(passwd, salt);
 }
 
+static struct zlog_target *zt_file, *zt_stdout, *zt_syslog;
+static struct zlog_target **zlog_tgt_get (zlog_dest_t dest)
+{
+	switch (dest) {
+	case ZLOG_DEST_SYSLOG: return &zt_syslog;
+	case ZLOG_DEST_STDOUT: return &zt_stdout;
+	case ZLOG_DEST_FILE: return &zt_file;
+	default: return NULL;
+	}
+}
+
+/* Called from command.c. */
+void zlog_set_level(zlog_dest_t dest, int log_level)
+{
+	struct zlog_target **zltp = zlog_tgt_get(dest), *zlt = NULL;
+
+	if (!zltp)
+		return;
+
+	if (log_level == ZLOG_DISABLED) {
+		if (!*zltp)
+			return;
+
+		zlog_delete(*zltp);
+		*zltp = NULL;
+		return;
+	}
+	if (!*zltp) {
+		switch (dest) {
+		case ZLOG_DEST_FILE: return;
+		case ZLOG_DEST_SYSLOG: *zltp = zlog_syslog_new(); break;
+		case ZLOG_DEST_STDOUT: *zltp = zlog_fd_new(1); break;
+		default: return;
+		}
+		zlt = *zltp;
+		zlt->syslog_facility = zlog_default->facility;
+		zlt->prio_min = log_level;
+		zlog_activate(zlt);
+	} else {
+		zlt = *zltp;
+		zlt->prio_min = log_level;
+	}
+}
+
 /* This function write configuration of this host. */
 static int config_write_host(struct vty *vty)
 {
@@ -526,7 +570,7 @@ static int config_write_host(struct vty *vty)
 				vty_out(vty, "enable password %s\n",
 					host.enable);
 		}
-
+#if 0
 		if (host.logfile
 		    && (zlog_default->maxlvl[ZLOG_DEST_FILE]
 			!= ZLOG_DISABLED)) {
@@ -579,7 +623,7 @@ static int config_write_host(struct vty *vty)
 		if (zlog_default->timestamp_precision > 0)
 			vty_out(vty, "log timestamp precision %d\n",
 				zlog_default->timestamp_precision);
-
+#endif
 		if (host.advanced)
 			vty_out(vty, "service advanced-vty\n");
 
@@ -2406,7 +2450,6 @@ DEFUN (no_config_log_monitor,
 
 static int set_log_file(struct vty *vty, const char *fname, int loglevel)
 {
-	int ret;
 	char *p = NULL;
 	const char *fullpath;
 
@@ -2427,11 +2470,12 @@ static int set_log_file(struct vty *vty, const char *fname, int loglevel)
 	} else
 		fullpath = fname;
 
-	ret = zlog_set_file(fullpath, loglevel);
+	zt_file->prio_min = loglevel;
+	bool ok = zlog_file_name_set(zt_file, fullpath);
 
 	XFREE(MTYPE_TMP, p);
 
-	if (!ret) {
+	if (!ok) {
 		if (vty)
 			vty_out(vty, "can't open logfile %s\n", fname);
 		return CMD_WARNING_CONFIG_FAILED;
@@ -2502,15 +2546,6 @@ DEFUN (config_log_file,
 				    zlog_default->default_lvl);
 }
 
-static void disable_log_file(void)
-{
-	zlog_reset_file();
-
-	XFREE(MTYPE_HOST, host.logfile);
-
-	host.logfile = NULL;
-}
-
 DEFUN (no_config_log_file,
        no_config_log_file_cmd,
        "no log file [FILENAME [LEVEL]]",
@@ -2520,7 +2555,13 @@ DEFUN (no_config_log_file,
        "Logging file name\n"
        "Logging level\n")
 {
-	disable_log_file();
+	struct zlog_target **zltp = zlog_tgt_get(ZLOG_DEST_FILE);
+
+	if (zltp && *zltp) {
+		zlog_delete (*zltp);
+		*zltp = NULL;
+	}
+
 	return CMD_SUCCESS;
 }
 

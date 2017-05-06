@@ -48,10 +48,6 @@
 
 DEFINE_MTYPE_STATIC(LIB, ZLOG, "Logging")
 
-/* hook for external logging */
-DEFINE_HOOK(zebra_ext_log, (int priority, const char *format, va_list args),
-	    (priority, format, args));
-
 static int logfile_fd = -1; /* Used in signal handler. */
 
 struct zlog *zlog_default = NULL;
@@ -282,6 +278,7 @@ size_t quagga_timestamp(int timestamp_precision, char *buf, size_t buflen)
 	return 0;
 }
 
+#if 0
 static inline void timestamp_control_render(struct timestamp_control *ctl)
 {
 	if (!ctl->already_rendered) {
@@ -434,6 +431,7 @@ out:
 	errno = original_errno;
 	pthread_mutex_unlock(&loglock);
 }
+#endif
 
 int vzlog_test(int priority)
 {
@@ -779,6 +777,7 @@ void zlog_backtrace(int priority)
 #endif
 }
 
+#if 0
 void zlog(int priority, const char *format, ...)
 {
 	va_list args;
@@ -808,6 +807,7 @@ ZLOG_FUNC(zlog_notice, LOG_NOTICE)
 ZLOG_FUNC(zlog_debug, LOG_DEBUG)
 
 #undef ZLOG_FUNC
+#endif
 
 void zlog_thread_info(int log_level)
 {
@@ -906,6 +906,7 @@ void closezlog(void)
 	pthread_mutex_unlock(&loglock);
 }
 
+#if 0
 /* Called from command.c. */
 void zlog_set_level(zlog_dest_t dest, int log_level)
 {
@@ -1011,6 +1012,7 @@ int zlog_rotate(void)
 
 	return ret;
 }
+#endif
 
 /* Wrapper around strerror to handle case where it returns NULL. */
 const char *safe_strerror(int errnum)
