@@ -1281,7 +1281,7 @@ netlink_route_multipath (int cmd, struct prefix *p, struct prefix *src_p,
     {
       if (CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_RECURSIVE))
         continue;
-      if (cmd == RTM_NEWROUTE && !CHECK_FLAG(nexthop->flags, NEXTHOP_FLAG_ACTIVE))
+      if (cmd == RTM_NEWROUTE && NEXTHOP_IS_ACTIVE(nexthop->flags))
         continue;
       if (cmd == RTM_DELROUTE && !CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_FIB))
         continue;
@@ -1330,7 +1330,7 @@ netlink_route_multipath (int cmd, struct prefix *p, struct prefix *src_p,
 	    }
 
           if ((cmd == RTM_NEWROUTE
-               && CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_ACTIVE))
+               && NEXTHOP_IS_ACTIVE (nexthop->flags))
               || (cmd == RTM_DELROUTE
                   && CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_FIB)))
             {
@@ -1405,7 +1405,7 @@ netlink_route_multipath (int cmd, struct prefix *p, struct prefix *src_p,
 	    }
 
           if ((cmd == RTM_NEWROUTE
-               && CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_ACTIVE))
+               && NEXTHOP_IS_ACTIVE (nexthop->flags))
               || (cmd == RTM_DELROUTE
                   && CHECK_FLAG (nexthop->flags, NEXTHOP_FLAG_FIB)))
             {

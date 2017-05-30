@@ -44,6 +44,11 @@ enum nexthop_types_t
   NEXTHOP_TYPE_BLACKHOLE,        /* Null0 nexthop.  */
 };
 
+/* IPV[46] -> IPV[46]_IFINDEX */
+#define NEXTHOP_FIRSTHOPTYPE(type) \
+	((type) == NEXTHOP_TYPE_IFINDEX || (type) == NEXTHOP_TYPE_BLACKHOLE) \
+		? (type) : ((type) | 1)
+
 /* Nexthop label structure. */
 struct nexthop_label
 {
@@ -70,6 +75,10 @@ struct nexthop
 #define NEXTHOP_FLAG_ONLINK     (1 << 3) /* Nexthop should be installed onlink. */
 #define NEXTHOP_FLAG_MATCHED    (1 << 4) /* Already matched vs a nexthop */
 #define NEXTHOP_FLAG_FILTERED   (1 << 5) /* rmap filtered, used by static only */
+#define NEXTHOP_FLAG_DUPLICATE  (1 << 6) /* nexthop duplicates another active one */
+#define NEXTHOP_IS_ACTIVE(flags) \
+	(CHECK_FLAG(flags, NEXTHOP_FLAG_ACTIVE) \
+		&& !CHECK_FLAG(flags, NEXTHOP_FLAG_DUPLICATE))
 
   /* Nexthop address */
   union g_addr gate;
@@ -116,6 +125,7 @@ void nexthop_del_labels (struct nexthop *);
 
 extern const char *nexthop_type_to_str (enum nexthop_types_t nh_type);
 extern int nexthop_same_no_recurse (struct nexthop *next1, struct nexthop *next2);
+extern int nexthop_same_firsthop (struct nexthop *next1, struct nexthop *next2);
 extern int nexthop_labels_match (struct nexthop *nh1, struct nexthop *nh2);
 
 extern const char * nexthop2str (struct nexthop *nexthop, char *str, int size);
