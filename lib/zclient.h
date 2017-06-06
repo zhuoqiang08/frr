@@ -96,6 +96,8 @@ typedef enum {
   ZEBRA_FEC_REGISTER,
   ZEBRA_FEC_UNREGISTER,
   ZEBRA_FEC_UPDATE,
+  ZEBRA_MPLS_PW_ADD,
+  ZEBRA_MPLS_PW_DELETE,
 } zebra_message_types_t;
 
 struct redist_proto
