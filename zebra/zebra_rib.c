@@ -50,8 +50,9 @@
 #include "zebra/zebra_rnh.h"
 #include "zebra/interface.h"
 #include "zebra/connected.h"
+#include "zebra/fib_api.h"
 
-DEFINE_HOOK(rib_update, (struct route_node *rn, const char *reason), (rn, reason))
+static struct fib_api *zebra_fib_api;
 
 /* Should we allow non Quagga processes to delete our routes */
 extern int allow_delete;
@@ -1111,8 +1112,7 @@ rib_install_kernel (struct route_node *rn, struct route_entry *re, struct route_
    * Make sure we update the FPM any time we send new information to
    * the kernel.
    */
-  hook_call(rib_update, rn, "installing in kernel");
-  ret = kernel_route_rib (p, src_p, old, re);
+  ret = zebra_rib_api->route_update(zebra_rib_api, p, src_p, old, re);
   zvrf->installs++;
 
   /* If install succeeds, update FIB flag for nexthops. */
@@ -1157,8 +1157,7 @@ rib_uninstall_kernel (struct route_node *rn, struct route_entry *re)
    * Make sure we update the FPM any time we send new information to
    * the kernel.
    */
-  hook_call(rib_update, rn, "uninstalling from kernel");
-  ret = kernel_route_rib (p, src_p, re, NULL);
+  ret = zebra_rib_api->route_update(zebra_rib_api, p, src_p, re, NULL);
   zvrf->removals++;
 
   for (ALL_NEXTHOPS_RO(re->nexthop, nexthop, tnexthop, recursing))
@@ -1175,9 +1174,6 @@ rib_uninstall (struct route_node *rn, struct route_entry *re)
 
   if (CHECK_FLAG (re->status, ROUTE_ENTRY_SELECTED_FIB))
     {
-      if (info->safi == SAFI_UNICAST)
-        hook_call(rib_update, rn, "rib_uninstall");
-
       if (! RIB_SYSTEM_ROUTE (re))
 	rib_uninstall_kernel (rn, re);
 
@@ -1262,8 +1258,6 @@ static void
 rib_process_add_fib(struct zebra_vrf *zvrf, struct route_node *rn,
                     struct route_entry *new)
 {
-  hook_call(rib_update, rn, "new route selected");
-
   /* Update real nexthop. This may actually determine if nexthop is active or not. */
   if (!nexthop_active_update (rn, new, 1))
     {
@@ -1302,8 +1296,6 @@ static void
 rib_process_del_fib(struct zebra_vrf *zvrf, struct route_node *rn,
                     struct route_entry *old)
 {
-  hook_call(rib_update, rn, "removing existing route");
-
   /* Uninstall from kernel. */
   if (IS_ZEBRA_DEBUG_RIB)
     {
@@ -1343,8 +1335,6 @@ rib_process_update_fib (struct zebra_vrf *zvrf, struct route_node *rn,
   if (new != old ||
       CHECK_FLAG (new->status, ROUTE_ENTRY_CHANGED))
     {
-      hook_call(rib_update, rn, "updating existing route");
-
       /* Update the nexthop; we could determine here that nexthop is inactive. */
       if (nexthop_active_update (rn, new, 1))
         nh_active = 1;
@@ -2903,9 +2893,6 @@ rib_close_table (struct route_table *table)
           if (!CHECK_FLAG (re->status, ROUTE_ENTRY_SELECTED_FIB))
 	    continue;
 
-          if (info->safi == SAFI_UNICAST)
-            hook_call(rib_update, rn, NULL);
-
 	  if (! RIB_SYSTEM_ROUTE (re))
 	    rib_uninstall_kernel (rn, re);
         }
@@ -3026,3 +3013,10 @@ rib_tables_iter_next (rib_tables_iter_t *iter)
   return table;
 }
 
+DEFUN(fibapi_config,
+      fibapi_config_cmd,
+      "fib-api root ROOTTYPE ROOTNAME",
+      "yadda help string")
+{
+  zebra_fib_api = zebra_fap_get(argv[2]->text, argv[3]->text);
+}
