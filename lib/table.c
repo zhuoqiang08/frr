@@ -294,21 +294,9 @@ route_node_lookup (const struct route_table *table, union prefixconstptr pu)
 {
   const struct prefix *p = pu.p;
   struct route_node *node;
-  u_char prefixlen = p->prefixlen;
-  const u_char *prefix = &p->u.prefix;
 
-  node = table->top;
-
-  while (node && node->p.prefixlen <= prefixlen &&
-	 prefix_match (&node->p, p))
-    {
-      if (node->p.prefixlen == prefixlen)
-        return node->info ? route_lock_node (node) : NULL;
-
-      node = node->link[prefix_bit(prefix, node->p.prefixlen)];
-    }
-
-  return NULL;
+  node = hash_get (table->hash, (void *)p, NULL);
+  return (node && node->info) ? route_lock_node (node) : NULL;
 }
 
 /* Lookup same prefix node.  Return NULL when we can't find route. */
@@ -317,21 +305,9 @@ route_node_lookup_maynull (const struct route_table *table, union prefixconstptr
 {
   const struct prefix *p = pu.p;
   struct route_node *node;
-  u_char prefixlen = p->prefixlen;
-  const u_char *prefix = &p->u.prefix;
 
-  node = table->top;
-
-  while (node && node->p.prefixlen <= prefixlen &&
-	 prefix_match (&node->p, p))
-    {
-      if (node->p.prefixlen == prefixlen)
-        return route_lock_node (node);
-
-      node = node->link[prefix_bit(prefix, node->p.prefixlen)];
-    }
-
-  return NULL;
+  node = hash_get (table->hash, (void *)p, NULL);
+  return node ? route_lock_node (node) : NULL;
 }
 
 /* Add node to routing table. */
@@ -345,6 +321,10 @@ route_node_get (struct route_table *const table, union prefixconstptr pu)
   struct route_node *inserted;
   u_char prefixlen = p->prefixlen;
   const u_char *prefix = &p->u.prefix;
+
+  node = hash_get (table->hash, (void *)p, NULL);
+  if (node && node->info)
+    return route_lock_node (node);
 
   match = NULL;
   node = table->top;
