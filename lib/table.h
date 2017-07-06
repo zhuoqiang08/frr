@@ -72,6 +72,28 @@ struct route_table
 };
 
 /*
+ * node->link is really internal to the table code and should not be
+ * accessed by outside code.  We don't have any writers (yay), though some
+ * readers are left to be fixed.
+ *
+ * rationale: we need to add a hash table in parallel, to speed up
+ * exact-match lookups.
+ *
+ * same really applies for node->parent, though that's less of an issue.
+ * table->link should be - and is - NEVER written by outside code
+ */
+#ifdef FRR_COMPILING_TABLE_C
+#define table_rdonly(x)		x
+#define table_internal(x)	x
+#else
+#define table_rdonly(x)		const x
+#define table_internal(x)	const x \
+	__attribute__((deprecated("this should only be accessed by lib/table.c")))
+/* table_internal is for node->link and node->lock, once we have done
+ * something about remaining accesses */
+#endif
+
+/*
  * Macro that defines all fields in a route node.
  */
 #define ROUTE_NODE_FIELDS			\
@@ -79,12 +101,12 @@ struct route_table
   struct prefix p;				\
 						\
   /* Tree link. */				\
-  struct route_table *table;			\
-  struct route_node *parent;			\
-  struct route_node *link[2];			\
+  struct route_table * table_rdonly(table);	\
+  struct route_node * table_rdonly(parent);	\
+  struct route_node * table_rdonly(link[2]);	\
 						\
   /* Lock of this radix */			\
-  unsigned int lock;				\
+  unsigned int table_rdonly(lock);		\
 						\
   /* Each node of route. */			\
   void *info;					\
