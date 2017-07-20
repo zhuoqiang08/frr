@@ -247,6 +247,36 @@ struct route_node *route_node_match(const struct route_table *table,
 	return NULL;
 }
 
+struct route_node *route_node_match_maynull(const struct route_table *table,
+				    union prefixconstptr pu)
+{
+	const struct prefix *p = pu.p;
+	struct route_node *node;
+	struct route_node *matched;
+
+	matched = NULL;
+	node = table->top;
+
+	/* Walk down tree.  If there is matched route then store it to
+	   matched. */
+	while (node && node->p.prefixlen <= p->prefixlen
+	       && prefix_match(&node->p, p)) {
+		matched = node;
+
+		if (node->p.prefixlen == p->prefixlen)
+			break;
+
+		node = node->link[prefix_bit(&p->u.prefix, node->p.prefixlen)];
+	}
+
+	/* If matched route found, return it. */
+	if (matched)
+		return route_lock_node(matched);
+
+	return NULL;
+}
+
+
 struct route_node *route_node_match_ipv4(const struct route_table *table,
 					 const struct in_addr *addr)
 {

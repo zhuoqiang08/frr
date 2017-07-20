@@ -55,6 +55,9 @@ extern route_table_delegate_t _srcdest_dstnode_delegate;
 extern route_table_delegate_t _srcdest_srcnode_delegate;
 
 extern struct route_table *srcdest_table_init(void);
+extern struct route_node *srcdest_rnode_match(struct route_table *table,
+					      union prefixptr dst_pu,
+					      struct prefix_ipv6 *src_p);
 extern struct route_node *srcdest_rnode_get(struct route_table *table,
 					    union prefixptr dst_pu,
 					    struct prefix_ipv6 *src_p);

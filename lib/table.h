@@ -196,6 +196,8 @@ extern struct route_node *route_node_lookup_maynull(const struct route_table *,
 extern struct route_node *route_lock_node(struct route_node *node);
 extern struct route_node *route_node_match(const struct route_table *,
 					   union prefixconstptr);
+extern struct route_node *route_node_match_maynull(const struct route_table *,
+						   union prefixconstptr);
 extern struct route_node *route_node_match_ipv4(const struct route_table *,
 						const struct in_addr *);
 extern struct route_node *route_node_match_ipv6(const struct route_table *,

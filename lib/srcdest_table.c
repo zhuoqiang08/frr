@@ -263,6 +263,40 @@ struct route_node *srcdest_rnode_lookup(struct route_table *table,
 	return srn;
 }
 
+struct route_node *srcdest_rnode_match(struct route_table *table,
+				       union prefixptr dst_pu,
+				       struct prefix_ipv6 *src_p)
+{
+	struct prefix_ipv6 *dst_p = dst_pu.p6;
+	struct route_node *rn;
+	struct route_node *retn = NULL;
+
+	rn = route_node_match_maynull(table, (struct prefix *)dst_p);
+	if (rn)
+		route_unlock_node(rn);
+
+	while (rn && !retn) {
+		retn = rn;
+		if (src_p->prefixlen > 0) {
+			struct srcdest_rnode *srn;
+
+			srn = srcdest_rnode_from_rnode(rn);
+			if (srn->src_table)
+				retn = route_node_lookup(srn->src_table,
+						src_p);
+			/* still keep default match */
+		}
+		if (retn && retn->info) {
+			route_lock_node(retn);
+			return retn;
+		}
+
+		rn = rn->parent;
+	}
+	return NULL;
+}
+
+
 void srcdest_rnode_prefixes(struct route_node *rn, struct prefix **p,
 			    struct prefix **src_p)
 {
