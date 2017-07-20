@@ -75,6 +75,9 @@ zebra_fpm_la_SOURCES += zebra_fpm_dt.c
 endif
 endif
 
+rtadv.o: rtadv_clippy.c
+rtadv.lo: rtadv_clippy.c
+
 
 EXTRA_DIST = if_ioctl.c if_ioctl_solaris.c if_netlink.c \
         if_sysctl.c ipforward_proc.c \

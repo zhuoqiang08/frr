@@ -281,6 +281,45 @@ static void rtadv_send_packet(int sock, struct interface *ifp)
 	/* Fill in prefix. */
 	for (ALL_LIST_ELEMENTS_RO(zif->rtadv.AdvPrefixList, node, rprefix)) {
 		struct nd_opt_prefix_info *pinfo;
+		bool active = !rprefix->cond_active;
+
+		if (!active) {
+			struct route_table *table = zebra_vrf_table(AFI_IP6,
+					SAFI_UNICAST, ifp->vrf_id);
+			struct route_node *rn = srcdest_rnode_match(
+					table,
+					&rprefix->cond_prefix,
+					&rprefix->prefix);
+			struct route_entry *re = NULL;
+
+			if (rn) {
+				RNODE_FOREACH_RE(rn, re) {
+					if (CHECK_FLAG(re->status, ROUTE_ENTRY_REMOVED))
+						continue;
+					if (CHECK_FLAG(re->status, ROUTE_ENTRY_SELECTED_FIB))
+						break;
+				}
+			}
+
+			if (IS_ZEBRA_DEBUG_PACKET) {
+				char srcbuf[128], dstbuf[128], rbuf[128];
+				if (rn)
+					srcdest_rnode2str(rn, rbuf, sizeof(rbuf));
+				else
+					snprintf(rbuf, sizeof(rbuf), "N/A");
+
+				zlog_debug("conditional RA on %s for prefix %s, check to reach %s => %s protocol %s",
+						ifp->name,
+						prefix2str(&rprefix->prefix, dstbuf, sizeof(dstbuf)),
+						prefix2str(&rprefix->cond_prefix, srcbuf, sizeof(srcbuf)),
+						rbuf, re ? zebra_route_string(re->type) : "UNREACHABLE");
+			}
+
+			if (re)
+				active = true;
+			if (rn)
+				route_unlock_node(rn);
+		}
 
 		pinfo = (struct nd_opt_prefix_info *)(buf + len);
 
@@ -299,7 +338,7 @@ static void rtadv_send_packet(int sock, struct interface *ifp)
 
 		pinfo->nd_opt_pi_valid_time = htonl(rprefix->AdvValidLifetime);
 		pinfo->nd_opt_pi_preferred_time =
-			htonl(rprefix->AdvPreferredLifetime);
+			active ? htonl(rprefix->AdvPreferredLifetime) : 0;
 		pinfo->nd_opt_pi_reserved2 = 0;
 
 		IPV6_ADDR_COPY(&pinfo->nd_opt_pi_prefix,
@@ -720,6 +759,8 @@ static void rtadv_prefix_set(struct zebra_if *zif, struct rtadv_prefix *rp)
 	rprefix->AdvOnLinkFlag = rp->AdvOnLinkFlag;
 	rprefix->AdvAutonomousFlag = rp->AdvAutonomousFlag;
 	rprefix->AdvRouterAddressFlag = rp->AdvRouterAddressFlag;
+	rprefix->cond_active = rp->cond_active;
+	rprefix->cond_prefix = rp->cond_prefix;
 }
 
 static int rtadv_prefix_reset(struct zebra_if *zif, struct rtadv_prefix *rp)
@@ -1255,9 +1296,11 @@ DEFUN (no_ipv6_nd_other_config_flag,
 	return CMD_SUCCESS;
 }
 
-DEFUN (ipv6_nd_prefix,
+#include "rtadv_clippy.c"
+
+DEFPY (ipv6_nd_prefix,
        ipv6_nd_prefix_cmd,
-       "ipv6 nd prefix X:X::X:X/M [<(0-4294967295)|infinite> <(0-4294967295)|infinite>] [<router-address|off-link [no-autoconfig]|no-autoconfig [off-link]>]",
+       "ipv6 nd prefix X:X::X:X/M$pfx [<(0-4294967295)|infinite> <(0-4294967295)|infinite>] [<router-address|off-link [no-autoconfig]|no-autoconfig [off-link]>] [conditional X:X::X:X/M]",
        "Interface IPv6 config commands\n"
        "Neighbor discovery\n"
        "Prefix information\n"
@@ -1333,6 +1376,10 @@ DEFUN (ipv6_nd_prefix,
 			return CMD_WARNING_CONFIG_FAILED;
 		}
 	}
+
+	rp.cond_active = (conditional_str != NULL);
+	if (rp.cond_active)
+		rp.cond_prefix = *conditional;
 
 	rtadv_prefix_set(zebra_if, &rp);
 
@@ -1538,6 +1585,9 @@ void rtadv_config_write(struct vty *vty, struct interface *ifp)
 			vty_out(vty, " no-autoconfig");
 		if (rprefix->AdvRouterAddressFlag)
 			vty_out(vty, " router-address");
+		if (rprefix->cond_active)
+			vty_out(vty, " conditional %s",
+					prefix2str(&rprefix->cond_prefix, buf, sizeof(buf)));
 		vty_out(vty, "\n");
 	}
 }

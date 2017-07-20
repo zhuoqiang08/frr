@@ -53,6 +53,9 @@ struct rtadv_prefix {
 #ifndef ND_OPT_PI_FLAG_RADDR
 #define ND_OPT_PI_FLAG_RADDR         0x20
 #endif
+
+	bool cond_active;
+	struct prefix_ipv6 cond_prefix;
 };
 
 extern void rtadv_config_write(struct vty *, struct interface *);
