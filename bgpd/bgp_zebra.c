@@ -1072,18 +1072,6 @@ int bgp_nexthop_set(union sockunion *local, union sockunion *remote,
 			peer->shared_network = 0;
 	}
 
-/* KAME stack specific treatment.  */
-#ifdef KAME
-	if (IN6_IS_ADDR_LINKLOCAL(&nexthop->v6_global)
-	    && IN6_LINKLOCAL_IFINDEX(nexthop->v6_global)) {
-		SET_IN6_LINKLOCAL_IFINDEX(nexthop->v6_global, 0);
-	}
-	if (IN6_IS_ADDR_LINKLOCAL(&nexthop->v6_local)
-	    && IN6_LINKLOCAL_IFINDEX(nexthop->v6_local)) {
-		SET_IN6_LINKLOCAL_IFINDEX(nexthop->v6_local, 0);
-	}
-#endif /* KAME */
-
 	/* If we have identified the local interface, there is no error for now.
 	 */
 	return 0;

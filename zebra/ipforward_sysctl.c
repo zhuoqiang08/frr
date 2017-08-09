@@ -86,13 +86,7 @@ int ipforward_off(void)
 }
 
 /* IPv6 forwarding control MIB. */
-int mib_ipv6[MIB_SIZ] = {CTL_NET, PF_INET6,
-#if defined(KAME)
-			 IPPROTO_IPV6, IPV6CTL_FORWARDING
-#else  /* NOT KAME */
-			 IPPROTO_IP, IP6CTL_FORWARDING
-#endif /* KAME */
-};
+int mib_ipv6[MIB_SIZ] = {CTL_NET, PF_INET6, IPPROTO_IPV6, IPV6CTL_FORWARDING };
 
 int ipforward_ipv6(void)
 {

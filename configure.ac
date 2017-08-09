@@ -867,7 +867,6 @@ case "$host_os" in
     AC_MSG_RESULT([OpenBSD])
 
     AC_DEFINE(OPEN_BSD,,OpenBSD)
-    AC_DEFINE(KAME,1,KAME IPv6)
 
     if test "x${enable_pimd}" != "xno"; then
       case "$host_os" in
@@ -883,7 +882,6 @@ case "$host_os" in
     AC_MSG_RESULT([BSD])
 
     AC_DEFINE(HAVE_NET_RT_IFLIST,,NET_RT_IFLIST)
-    AC_DEFINE(KAME,1,KAME IPv6)
     ;;
 esac
 

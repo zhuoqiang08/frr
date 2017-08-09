@@ -755,12 +755,6 @@ int ifam_read(struct ifa_msghdr *ifam)
 					      &brd.sin.sin_addr);
 		break;
 	case AF_INET6:
-		/* Unset interface index from link-local address when IPv6 stack
-		   is KAME. */
-		if (IN6_IS_ADDR_LINKLOCAL(&addr.sin6.sin6_addr)) {
-			SET_IN6_LINKLOCAL_IFINDEX(addr.sin6.sin6_addr, 0);
-		}
-
 		if (ifam->ifam_type == RTM_NEWADDR)
 			connected_add_ipv6(ifp, flags, &addr.sin6.sin6_addr,
 					   ip6_masklen(mask.sin6.sin6_addr),
@@ -1046,13 +1040,6 @@ void rtm_read(struct rt_msghdr *rtm)
 			p.prefixlen = IPV6_MAX_PREFIXLEN;
 		else
 			p.prefixlen = ip6_masklen(mask.sin6.sin6_addr);
-
-#ifdef KAME
-		if (IN6_IS_ADDR_LINKLOCAL(&gate.sin6.sin6_addr)) {
-			ifindex = IN6_LINKLOCAL_IFINDEX(gate.sin6.sin6_addr);
-			SET_IN6_LINKLOCAL_IFINDEX(gate.sin6.sin6_addr, 0);
-		}
-#endif /* KAME */
 
 		/* CHANGE: delete the old prefix, we have no further information
 		 * to specify the route really

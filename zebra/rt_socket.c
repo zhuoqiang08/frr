@@ -314,19 +314,6 @@ static int kernel_rtm_ipv6(int cmd, struct prefix *p, struct route_entry *re)
 				SET_FLAG(nexthop->flags, NEXTHOP_FLAG_FIB);
 		}
 
-/* Under kame set interface index to link local address. */
-#ifdef KAME
-
-#define SET_IN6_LINKLOCAL_IFINDEX(a, i)                                        \
-	do {                                                                   \
-		(a).s6_addr[2] = ((i) >> 8) & 0xff;                            \
-		(a).s6_addr[3] = (i)&0xff;                                     \
-	} while (0)
-
-		if (gate && IN6_IS_ADDR_LINKLOCAL(&sin_gate.sin6_addr))
-			SET_IN6_LINKLOCAL_IFINDEX(sin_gate.sin6_addr, ifindex);
-#endif /* KAME */
-
 		if (gate && p->prefixlen == 128)
 			mask = NULL;
 		else {
