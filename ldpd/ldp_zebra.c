@@ -100,6 +100,7 @@ pw2zpw(struct l2vpn_pw *pw, struct zapi_pw *zpw)
 	memset(zpw, 0, sizeof(*zpw));
 	strlcpy(zpw->ifname, pw->ifname, sizeof(zpw->ifname));
 	zpw->ifindex = pw->ifindex;
+	zpw->group_ifindex = pw->l2vpn->br_ifindex;
 	zpw->type = pw->l2vpn->pw_type;
 	zpw->af = pw->af;
 	zpw->nexthop.ipv6 = pw->addr.v6;

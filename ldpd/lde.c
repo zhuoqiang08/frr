@@ -456,6 +456,10 @@ lde_dispatch_parent(struct thread *thread)
 				fatalx("IFSTATUS imsg with wrong len");
 			kif = imsg.data;
 
+			l2vpn = l2vpn_find_brname(ldeconf, kif->ifname);
+			if (l2vpn)
+				l2vpn->br_ifindex = kif->ifindex;
+
 			iface = if_lookup_name(ldeconf, kif->ifname);
 			if (iface) {
 				if_update_info(iface, kif);

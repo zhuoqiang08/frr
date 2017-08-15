@@ -70,6 +70,18 @@ l2vpn_find(struct ldpd_conf *xconf, const char *name)
 	return (RB_FIND(l2vpn_head, &xconf->l2vpn_tree, &l2vpn));
 }
 
+struct l2vpn *
+l2vpn_find_brname(struct ldpd_conf *xconf, const char *brname)
+{
+	struct l2vpn    *l2vpn;
+
+	RB_FOREACH(l2vpn, l2vpn_head, &xconf->l2vpn_tree)
+		if (strcmp(l2vpn->br_ifname, brname) == 0)
+			return (l2vpn);
+
+	return (NULL);
+}
+
 void
 l2vpn_del(struct l2vpn *l2vpn)
 {
