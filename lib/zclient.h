@@ -290,6 +290,7 @@ struct zapi_ipv4 {
 struct zapi_pw {
 	char ifname[IF_NAMESIZE];
 	ifindex_t ifindex;
+	ifindex_t group_ifindex;
 	int type;
 	int af;
 	union g_addr nexthop;

@@ -1789,6 +1789,7 @@ int zebra_send_pw(struct zclient *zclient, int command, struct zapi_pw *pw)
 	zclient_create_header(s, command, VRF_DEFAULT);
 	stream_write(s, pw->ifname, IF_NAMESIZE);
 	stream_putl(s, pw->ifindex);
+	stream_putl(s, pw->group_ifindex);
 
 	/* Put type */
 	stream_putl(s, pw->type);

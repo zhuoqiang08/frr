@@ -42,8 +42,14 @@
 
 void rt_netlink_init(void);
 
+struct netlink_pw {
+	ifindex_t ifindex;
+	bool use_cw;
+};
+
 extern void clear_nhlfe_installed(zebra_lsp_t *lsp);
-extern int netlink_mpls_multipath(int cmd, zebra_lsp_t *lsp);
+extern int netlink_mpls_multipath(int cmd, zebra_lsp_t *lsp,
+				  struct netlink_pw *pwdata);
 
 extern int netlink_route_change(struct sockaddr_nl *snl, struct nlmsghdr *h,
 				ns_id_t ns_id, int startup);

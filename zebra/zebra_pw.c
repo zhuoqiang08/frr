@@ -109,7 +109,8 @@ void zebra_pw_del(struct zebra_vrf *zvrf, struct zebra_pw *pw)
 	XFREE(MTYPE_PW, pw);
 }
 
-void zebra_pw_change(struct zebra_pw *pw, ifindex_t ifindex, int type, int af,
+void zebra_pw_change(struct zebra_pw *pw, ifindex_t ifindex,
+		     ifindex_t group_ifindex, int type, int af,
 		     union g_addr *nexthop, uint32_t local_label,
 		     uint32_t remote_label, uint8_t flags,
 		     union pw_protocol_fields *data)
@@ -117,6 +118,7 @@ void zebra_pw_change(struct zebra_pw *pw, ifindex_t ifindex, int type, int af,
 	zebra_deregister_rnh_pseudowire(pw->vrf_id, pw);
 
 	pw->ifindex = ifindex;
+	pw->group_ifindex = group_ifindex;
 	pw->type = type;
 	pw->af = af;
 	pw->nexthop = *nexthop;
@@ -362,7 +364,7 @@ DEFUN (pseudowire_labels,
 		remote_label = atoi(argv[idx + 1]->arg);
 	}
 
-	zebra_pw_change(pw, pw->ifindex, pw->type, pw->af, &pw->nexthop,
+	zebra_pw_change(pw, pw->ifindex, 0, pw->type, pw->af, &pw->nexthop,
 			local_label, remote_label, pw->flags, &pw->data);
 
 	return CMD_SUCCESS;
@@ -399,7 +401,7 @@ DEFUN (pseudowire_neighbor,
 		}
 	}
 
-	zebra_pw_change(pw, pw->ifindex, pw->type, af, &nexthop,
+	zebra_pw_change(pw, pw->ifindex, 0, pw->type, af, &nexthop,
 			pw->local_label, pw->remote_label, pw->flags,
 			&pw->data);
 
@@ -426,7 +428,7 @@ DEFUN (pseudowire_control_word,
 			flags = F_PSEUDOWIRE_CWORD;
 	}
 
-	zebra_pw_change(pw, pw->ifindex, pw->type, pw->af, &pw->nexthop,
+	zebra_pw_change(pw, pw->ifindex, 0, pw->type, pw->af, &pw->nexthop,
 			pw->local_label, pw->remote_label, flags, &pw->data);
 
 	return CMD_SUCCESS;

@@ -757,7 +757,7 @@ static void _netlink_route_build_singlepath(const char *routedesc, int bytelen,
 	nh_label = nexthop->nh_label;
 	if (rtmsg->rtm_family == AF_MPLS) {
 		assert(nh_label);
-		assert(nh_label->num_labels == 1);
+		assert(nh_label->num_labels >= 1);
 	}
 
 	if (nh_label && nh_label->num_labels) {
@@ -2267,7 +2267,7 @@ int kernel_del_neigh(struct interface *ifp, struct ipaddr *ip)
 /*
  * MPLS label forwarding table change via netlink interface.
  */
-int netlink_mpls_multipath(int cmd, zebra_lsp_t *lsp)
+int netlink_mpls_multipath(int cmd, zebra_lsp_t *lsp, struct netlink_pw *npw)
 {
 	mpls_lse_t lse;
 	zebra_nhlfe_t *nhlfe;
@@ -2330,6 +2330,17 @@ int netlink_mpls_multipath(int cmd, zebra_lsp_t *lsp)
 	/* Fill destination */
 	lse = mpls_lse_encode(lsp->ile.in_label, 0, 0, 1);
 	addattr_l(&req.n, sizeof req, RTA_DST, &lse, sizeof(mpls_lse_t));
+
+#define RTA_VPLS_IF 27
+#define RTA_VPLS_FLAGS 28
+#define RTA_VPLS_F_CW 3
+	if (npw) {
+		addattr32(&req.n, sizeof req, RTA_VPLS_IF, npw->ifindex);
+		if (npw->use_cw) {
+			uint8_t val = RTA_VPLS_F_CW;
+			addattr_l(&req.n, sizeof req, RTA_VPLS_FLAGS, &val, 1);
+		}
+	}
 
 	/* Fill nexthops (paths) based on single-path or multipath. The paths
 	 * chosen depend on the operation.

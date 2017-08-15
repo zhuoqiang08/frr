@@ -33,6 +33,7 @@ struct zebra_pw {
 	vrf_id_t vrf_id;
 	char ifname[IF_NAMESIZE];
 	ifindex_t ifindex;
+	ifindex_t group_ifindex;
 	int type;
 	int af;
 	union g_addr nexthop;
@@ -62,8 +63,9 @@ DECLARE_HOOK(pw_uninstall, (struct zebra_pw * pw), (pw))
 struct zebra_pw *zebra_pw_add(struct zebra_vrf *, const char *, uint8_t,
 			      struct zserv *);
 void zebra_pw_del(struct zebra_vrf *, struct zebra_pw *);
-void zebra_pw_change(struct zebra_pw *, ifindex_t, int, int, union g_addr *,
-		     uint32_t, uint32_t, uint8_t, union pw_protocol_fields *);
+void zebra_pw_change(struct zebra_pw *, ifindex_t, ifindex_t, int, int,
+		     union g_addr *, uint32_t, uint32_t, uint8_t,
+		     union pw_protocol_fields *);
 struct zebra_pw *zebra_pw_find(struct zebra_vrf *, const char *);
 void zebra_pw_update(struct zebra_pw *);
 void zebra_pw_install_failure(struct zebra_pw *);

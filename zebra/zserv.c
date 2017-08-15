@@ -2067,7 +2067,7 @@ static int zread_pseudowire(int command, struct zserv *client, u_short length,
 	struct stream *s;
 	struct zebra_vrf *zvrf;
 	char ifname[IF_NAMESIZE];
-	ifindex_t ifindex;
+	ifindex_t ifindex, group_ifindex;
 	int type;
 	int af;
 	union g_addr nexthop;
@@ -2088,6 +2088,7 @@ static int zread_pseudowire(int command, struct zserv *client, u_short length,
 	/* Get data. */
 	stream_get(ifname, s, IF_NAMESIZE);
 	ifindex = stream_getl(s);
+	group_ifindex = stream_getl(s);
 	type = stream_getl(s);
 	af = stream_getl(s);
 	switch (af) {
@@ -2144,8 +2145,8 @@ static int zread_pseudowire(int command, struct zserv *client, u_short length,
 			break;
 		}
 
-		zebra_pw_change(pw, ifindex, type, af, &nexthop, local_label,
-				remote_label, flags, &data);
+		zebra_pw_change(pw, ifindex, group_ifindex, type, af, &nexthop,
+				local_label, remote_label, flags, &data);
 		break;
 	}
 
