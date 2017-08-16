@@ -248,9 +248,12 @@ static int zebra_pw_check_reachability(struct zebra_pw *pw)
 	re = rib_match(family2afi(pw->af), SAFI_UNICAST, pw->vrf_id,
 		       &pw->nexthop, NULL);
 	if (!re) {
-		if (IS_ZEBRA_DEBUG_PW)
-			zlog_warn("%s: no route found for %s", __func__,
-				  pw->ifname);
+		if (IS_ZEBRA_DEBUG_PW) {
+			char ipbuf[PREFIX_STRLEN];
+			inet_ntop(pw->af, &pw->nexthop, ipbuf, sizeof(ipbuf));
+			zlog_warn("%s: no route found for %s, via %s",
+				  __func__, pw->ifname, ipbuf);
+		}
 		return -1;
 	}
 
