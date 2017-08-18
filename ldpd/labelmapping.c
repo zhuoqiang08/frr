@@ -526,7 +526,9 @@ len_fec_tlv(struct map *map)
 			len += PW_STATUS_TLV_LEN;
 		if (map->flags & F_MAP_PW_IFMTU)
 			len += FEC_SUBTLV_IFMTU_SIZE;
-    		if (map->flags & F_MAP_PW_STATUS)
+		if (map->flags & F_MAP_PW_VLANID)
+			len += FEC_SUBTLV_VLANID_SIZE;
+		if (map->flags & F_MAP_PW_STATUS)
 			len += PW_STATUS_TLV_SIZE;
 		break;
 	case MAP_TYPE_TYPED_WCARD:
@@ -551,7 +553,7 @@ int
 gen_fec_tlv(struct ibuf *buf, struct map *map)
 {
 	struct tlv	ft;
-	uint16_t	family, len, pw_type, ifmtu;
+	uint16_t	family, len, pw_type, ifmtu, vlanid;
 	uint8_t		pw_len = 0, twcard_len;
 	uint32_t	group_id, pwid;
 	int		err = 0;
@@ -592,6 +594,8 @@ gen_fec_tlv(struct ibuf *buf, struct map *map)
 			pw_len += FEC_PWID_SIZE;
 		if (map->flags & F_MAP_PW_IFMTU)
 			pw_len += FEC_SUBTLV_IFMTU_SIZE;
+		if (map->flags & F_MAP_PW_VLANID)
+			pw_len += FEC_SUBTLV_VLANID_SIZE;
 
 		len = FEC_PWID_ELM_MIN_LEN + pw_len;
 
@@ -620,6 +624,16 @@ gen_fec_tlv(struct ibuf *buf, struct map *map)
 
 			ifmtu = htons(map->fec.pwid.ifmtu);
 			err |= ibuf_add(buf, &ifmtu, sizeof(uint16_t));
+		}
+		if (map->flags & F_MAP_PW_VLANID) {
+			struct subtlv 	stlv;
+
+			stlv.type = SUBTLV_VLANID;
+			stlv.length = FEC_SUBTLV_VLANID_SIZE;
+			err |= ibuf_add(buf, &stlv, sizeof(uint16_t));
+
+			vlanid = htons(map->fec.pwid.vlanid);
+			err |= ibuf_add(buf, &vlanid, sizeof(uint16_t));
 		}
 		break;
 	case MAP_TYPE_TYPED_WCARD:
@@ -813,6 +827,23 @@ tlv_decode_fec_elm(struct nbr *nbr, struct ldp_msg *msg, char *buf,
 				    SUBTLV_HDR_SIZE, sizeof(uint16_t));
 				map->fec.pwid.ifmtu = ntohs(map->fec.pwid.ifmtu);
 				map->flags |= F_MAP_PW_IFMTU;
+				break;
+			case SUBTLV_VLANID:
+				if (stlv.length != FEC_SUBTLV_VLANID_SIZE) {
+					session_shutdown(nbr, S_BAD_TLV_LEN,
+					    msg->id, msg->type);
+					return (-1);
+				}
+				memcpy(&map->fec.pwid.vlanid, buf + off +
+				    SUBTLV_HDR_SIZE, sizeof(uint16_t));
+				map->fec.pwid.vlanid = ntohs(map->fec.pwid.vlanid);
+				if (map->fec.pwid.type != PW_TYPE_ETHERNET_TAGGED
+				    || map->fec.pwid.vlanid >= 4096) {
+					session_shutdown(nbr, S_BAD_TLV_VAL,
+					    msg->id, msg->type);
+					return (-1);
+				}
+				map->flags |= F_MAP_PW_VLANID;
 				break;
 			default:
 				/* ignore */

@@ -239,6 +239,7 @@ struct map {
 			uint32_t	pwid;
 			uint32_t	group_id;
 			uint16_t	ifmtu;
+			uint16_t	vlanid;
 		} pwid;
 		struct {
 			uint8_t		type;
@@ -264,6 +265,7 @@ struct map {
 #define F_MAP_PW_ID	0x08	/* pseudowire connection id */
 #define F_MAP_PW_IFMTU	0x10	/* pseudowire interface parameter */
 #define F_MAP_PW_STATUS	0x20	/* pseudowire status */
+#define F_MAP_PW_VLANID	0x40	/* tagged-mode vlan id requested */
 
 struct notify_msg {
 	uint32_t	status_code;
@@ -411,6 +413,7 @@ struct l2vpn_pw {
 	unsigned int		 ifindex;
 	uint32_t		 remote_group;
 	uint16_t		 remote_mtu;
+	uint16_t		 remote_vlanid;
 	uint32_t		 local_status;
 	uint32_t		 remote_status;
 	uint8_t			 flags;
@@ -650,6 +653,7 @@ struct ctl_pw {
 	uint32_t		 remote_gid;
 	uint16_t		 remote_ifmtu;
 	uint8_t			 remote_cword;
+	uint16_t		 remote_vlanid;
 	uint32_t		 status;
 };
 

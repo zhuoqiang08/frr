@@ -613,6 +613,8 @@ l2vpn_binding_ctl(pid_t pid)
 			pwctl.remote_gid = me->map.fec.pwid.group_id;
 			if (me->map.flags & F_MAP_PW_IFMTU)
 				pwctl.remote_ifmtu = me->map.fec.pwid.ifmtu;
+			if (me->map.flags & F_MAP_PW_VLANID)
+				pwctl.remote_vlanid = me->map.fec.pwid.vlanid;
 			if (pw)
 				pwctl.remote_cword = (pw->flags & F_PW_CWORD) ?
 				    1 : 0;

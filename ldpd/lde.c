@@ -944,6 +944,7 @@ lde_send_labelmapping(struct lde_nbr *ln, struct fec_node *fn, int single)
 
 		map.flags |= F_MAP_PW_IFMTU;
 		map.fec.pwid.ifmtu = pw->l2vpn->mtu;
+		/* we never send a vlan id, this is not currently supported */
 		if (pw->flags & F_PW_CWORD)
 			map.flags |= F_MAP_PW_CWORD;
 		if (pw->flags & F_PW_STATUSTLV) {

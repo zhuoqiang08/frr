@@ -1256,6 +1256,9 @@ show_l2vpn_binding_msg(struct vty *vty, struct imsg *imsg,
 			    "GroupID: %u\n", "", pw->remote_cword,
 			    pw_type_name(pw->type),pw->remote_gid);
 			vty_out (vty, "%-8sMTU: %u\n", "",pw->remote_ifmtu);
+			if (pw->type == PW_TYPE_ETHERNET_TAGGED)
+				vty_out (vty, "%-8sVLAN id: %u\n", "",
+					 pw->remote_vlanid);
 		} else
 			vty_out (vty,"    Remote Label: unassigned\n");
 		break;
@@ -1314,6 +1317,9 @@ show_l2vpn_binding_msg_json(struct imsg *imsg, struct show_params *params,
 			    pw->remote_gid);
 			json_object_int_add(json_pw, "remoteIfMtu",
 			    pw->remote_ifmtu);
+			if (pw->type == PW_TYPE_ETHERNET_TAGGED)
+				json_object_int_add(json_pw, "remoteVlanID",
+				    pw->remote_vlanid);
 		} else
 			json_object_string_add(json_pw, "remoteLabel",
 			    "unassigned");

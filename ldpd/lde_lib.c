@@ -528,6 +528,8 @@ lde_check_mapping(struct map *map, struct lde_nbr *ln)
 			pw->remote_group = map->fec.pwid.group_id;
 			if (map->flags & F_MAP_PW_IFMTU)
 				pw->remote_mtu = map->fec.pwid.ifmtu;
+			if (map->flags & F_MAP_PW_VLANID)
+				pw->remote_vlanid = map->fec.pwid.vlanid;
 			if (map->flags & F_MAP_PW_STATUS)
 				pw->remote_status = map->pw_status;
 			else
