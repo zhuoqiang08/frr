@@ -31,6 +31,7 @@
 #include "common_cli.h"
 
 struct thread_master *master;
+void (*test_exit)(void) = NULL;
 
 int dump_args(struct vty *vty, const char *descr, int argc,
 	      struct cmd_token *argv[])
@@ -48,6 +49,8 @@ int dump_args(struct vty *vty, const char *descr, int argc,
 static void vty_do_exit(int isexit)
 {
 	printf("\nend.\n");
+	if (test_exit)
+		test_exit();
 	cmd_terminate();
 	vty_terminate();
 	thread_master_free(master);

@@ -19,7 +19,9 @@ TESTS_BGPD = \
 	bgpd/test_capability \
 	bgpd/test_ecommunity \
 	bgpd/test_mp_attr \
-	bgpd/test_mpath
+	bgpd/test_mpath \
+	bgpd/test_rmap \
+	# end
 else
 TESTS_BGPD =
 endif
@@ -47,6 +49,7 @@ endif
 
 lib/cli/test_cli.o: lib/cli/test_cli_clippy.c
 ospf6d/test_lsdb.o: ospf6d/test_lsdb_clippy.c
+bgpd/test_rmap.o: bgpd/test_rmap_clippy.c
 
 check_PROGRAMS = \
 	lib/test_buffer \
@@ -129,6 +132,7 @@ bgpd_test_capability_SOURCES = bgpd/test_capability.c
 bgpd_test_ecommunity_SOURCES = bgpd/test_ecommunity.c
 bgpd_test_mp_attr_SOURCES = bgpd/test_mp_attr.c
 bgpd_test_mpath_SOURCES = bgpd/test_mpath.c
+bgpd_test_rmap_SOURCES = bgpd/test_rmap.c lib/cli/common_cli.c
 isisd_test_fuzz_isis_tlv_SOURCES = isisd/test_fuzz_isis_tlv.c
 isisd_test_fuzz_isis_tlv_CPPFLAGS = $(AM_CPPFLAGS) -I$(top_builddir)/tests/isisd
 
@@ -163,6 +167,7 @@ bgpd_test_capability_LDADD = $(BGP_TEST_LDADD)
 bgpd_test_ecommunity_LDADD = $(BGP_TEST_LDADD)
 bgpd_test_mp_attr_LDADD = $(BGP_TEST_LDADD)
 bgpd_test_mpath_LDADD = $(BGP_TEST_LDADD)
+bgpd_test_rmap_LDADD = $(BGP_TEST_LDADD)
 isisd_test_fuzz_isis_tlv_LDADD = $(ISISD_TEST_LDADD)
 ospf6d_test_lsdb_LDADD = $(OSPF6_TEST_LDADD)
 

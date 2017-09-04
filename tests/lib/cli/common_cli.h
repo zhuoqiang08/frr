@@ -28,6 +28,7 @@
 
 /* function to be implemented by test */
 extern void test_init(int argc, char **argv);
+extern void (*test_exit)(void);
 
 /* functions provided by common cli
  * (includes main())
