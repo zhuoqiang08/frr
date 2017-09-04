@@ -7427,6 +7427,73 @@ void bgp_init(void)
 	cmd_variable_handler_register(bgp_viewvrf_var_handlers);
 }
 
+/*
+  Try to free up allocations we know about so that diagnostic tools such as
+  valgrind are able to better illuminate leaks.
+
+  Zebra route removal and protocol teardown are not meant to be done here.
+  For example, "retain_mode" may be set.
+*/
+void bgp_fini(void)
+{
+	struct bgp *bgp;
+	struct listnode *node, *nnode;
+
+	bfd_gbl_exit();
+
+	bgp_close();
+
+	/* reverse bgp_master_init */
+	for (ALL_LIST_ELEMENTS(bm->bgp, node, nnode, bgp))
+		bgp_delete(bgp);
+
+	/* reverse bgp_dump_init */
+	bgp_dump_finish();
+
+	/* reverse bgp_route_init */
+	bgp_route_finish();
+
+	/* cleanup route maps */
+	bgp_route_map_terminate();
+
+	/* reverse bgp_attr_init */
+	bgp_attr_finish();
+
+	/* reverse access_list_init */
+	access_list_add_hook(NULL);
+	access_list_delete_hook(NULL);
+	access_list_reset();
+
+	/* reverse bgp_filter_init */
+	as_list_add_hook(NULL);
+	as_list_delete_hook(NULL);
+	bgp_filter_reset();
+
+	/* reverse prefix_list_init */
+	prefix_list_add_hook(NULL);
+	prefix_list_delete_hook(NULL);
+	prefix_list_reset();
+
+	/* reverse community_list_init */
+	community_list_terminate(bgp_clist);
+
+#if ENABLE_BGP_VNC
+	vnc_zebra_destroy();
+#endif
+	bgp_zebra_destroy();
+
+	list_delete(bm->bgp);
+	if (bm->listen_sockets)
+		list_free(bm->listen_sockets);
+	if (bm->process_main_queue) {
+		work_queue_free(bm->process_main_queue);
+		bm->process_main_queue = NULL;
+	}
+
+	memset(bm, 0, sizeof(*bm));
+}
+
+
 void bgp_terminate(void)
 {
 	struct bgp *bgp;

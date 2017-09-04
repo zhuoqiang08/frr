@@ -74,7 +74,6 @@ void sighup(void);
 void sigint(void);
 void sigusr1(void);
 
-static void bgp_exit(int);
 static void bgp_vrf_terminate(void);
 
 static struct quagga_signal_t bgp_signals[] = {
@@ -143,7 +142,12 @@ __attribute__((__noreturn__)) void sigint(void)
 	if (!retain_mode)
 		bgp_terminate();
 
-	bgp_exit(0);
+	frr_early_fini();
+
+	bgp_fini();
+	bgp_vrf_terminate();
+
+	frr_fini();
 
 	exit(0);
 }
@@ -152,74 +156,6 @@ __attribute__((__noreturn__)) void sigint(void)
 void sigusr1(void)
 {
 	zlog_rotate();
-}
-
-/*
-  Try to free up allocations we know about so that diagnostic tools such as
-  valgrind are able to better illuminate leaks.
-
-  Zebra route removal and protocol teardown are not meant to be done here.
-  For example, "retain_mode" may be set.
-*/
-static __attribute__((__noreturn__)) void bgp_exit(int status)
-{
-	struct bgp *bgp;
-	struct listnode *node, *nnode;
-
-	/* it only makes sense for this to be called on a clean exit */
-	assert(status == 0);
-
-	frr_early_fini();
-
-	bfd_gbl_exit();
-
-	bgp_close();
-
-	/* reverse bgp_master_init */
-	for (ALL_LIST_ELEMENTS(bm->bgp, node, nnode, bgp))
-		bgp_delete(bgp);
-
-	/* reverse bgp_dump_init */
-	bgp_dump_finish();
-
-	/* reverse bgp_route_init */
-	bgp_route_finish();
-
-	/* cleanup route maps */
-	bgp_route_map_terminate();
-
-	/* reverse bgp_attr_init */
-	bgp_attr_finish();
-
-	/* reverse access_list_init */
-	access_list_add_hook(NULL);
-	access_list_delete_hook(NULL);
-	access_list_reset();
-
-	/* reverse bgp_filter_init */
-	as_list_add_hook(NULL);
-	as_list_delete_hook(NULL);
-	bgp_filter_reset();
-
-	/* reverse prefix_list_init */
-	prefix_list_add_hook(NULL);
-	prefix_list_delete_hook(NULL);
-	prefix_list_reset();
-
-	/* reverse community_list_init */
-	community_list_terminate(bgp_clist);
-
-	bgp_vrf_terminate();
-#if ENABLE_BGP_VNC
-	vnc_zebra_destroy();
-#endif
-	bgp_zebra_destroy();
-
-	list_delete(bm->bgp);
-	memset(bm, 0, sizeof(*bm));
-
-	frr_fini();
-	exit(status);
 }
 
 static int bgp_vrf_new(struct vrf *vrf)

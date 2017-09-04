@@ -1242,6 +1242,7 @@ extern int bgp_config_write(struct vty *);
 extern void bgp_master_init(struct thread_master *master);
 
 extern void bgp_init(void);
+extern void bgp_fini(void);
 extern void bgp_route_map_init(void);
 extern void bgp_session_reset(struct peer *);
 
