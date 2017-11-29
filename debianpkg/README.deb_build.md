@@ -1,13 +1,13 @@
 Building your own FRRouting Debian Package
 ==========================================
-(Tested on Ubuntu 12.04, 14.04, 16.04 and Debian 8)
+(Tested on Ubuntu 12.04, 14.04, 16.04, 17.10, Debian 8 and Debian 9)
 
 1. Follow the package installation as outlined in doc/Building_on_XXXX.md
    (XXXX refers your OS Distribution) to install the required build packages
 
 2. Install the following additional packages:
 
-        apt-get install realpath equivs groff fakeroot debhelper
+        apt-get install realpath equivs groff fakeroot debhelper devscripts
 
 3. Checkout FRR under a **unpriviledged** user account
 
