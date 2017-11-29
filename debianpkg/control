@@ -26,7 +26,7 @@ Description: BGP/OSPF/RIP/RIPng/ISIS/PIM/LDP routing daemon forked from Quagga
 Package: frr-dbg
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, frr (= ${binary:Version})
-Priority: extra
+Priority: optional
 Section: debug
 Description: BGP/OSPF/RIP/RIPng/ISIS/PIM/LDP routing daemon (debug symbols)
  This package provides debugging symbols for all binary packages built 
