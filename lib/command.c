@@ -143,6 +143,7 @@ const char *node_names[] = {
 				     */
 	"bgp ipv6 flowspec",	    /* BGP_FLOWSPECV6_NODE
 				     */
+	"openfabric",		    // OPENFABRIC_NODE
 };
 /* clang-format on */
 
@@ -1429,6 +1430,7 @@ void cmd_exit(struct vty *vty)
 	case LDP_NODE:
 	case LDP_L2VPN_NODE:
 	case ISIS_NODE:
+	case OPENFABRIC_NODE:
 	case KEYCHAIN_NODE:
 	case RMAP_NODE:
 	case PBRMAP_NODE:
@@ -1540,6 +1542,7 @@ DEFUN (config_end,
 	case LDP_L2VPN_NODE:
 	case LDP_PSEUDOWIRE_NODE:
 	case ISIS_NODE:
+	case OPENFABRIC_NODE:
 	case KEYCHAIN_NODE:
 	case KEYCHAIN_KEY_NODE:
 	case VTY_NODE:
