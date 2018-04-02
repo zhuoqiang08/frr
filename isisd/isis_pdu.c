@@ -54,6 +54,7 @@
 #include "isisd/isis_te.h"
 #include "isisd/isis_mt.h"
 #include "isisd/isis_tlvs.h"
+#include "isisd/fabricd.h"
 
 static int ack_lsp(struct isis_lsp_hdr *hdr, struct isis_circuit *circuit,
 		   int level)
@@ -203,6 +204,12 @@ static int process_p2p_hello(struct iih_info *iih)
 	THREAD_TIMER_OFF(adj->t_expire);
 	thread_add_timer(master, isis_adj_expire, adj, (long)adj->hold_time,
 			 &adj->t_expire);
+
+	/* While fabricds initial sync is in progress, ignore hellos from other
+	 * interfaces than the one we are performing the initial sync on. */
+	if (fabricd_initial_sync_is_in_progress(iih->circuit->area)
+	    && fabricd_initial_sync_circuit(iih->circuit->area) != iih->circuit)
+		return ISIS_OK;
 
 	/* 8.2.5.2 a) a match was detected */
 	if (isis_tlvs_area_addresses_match(iih->tlvs,
@@ -1153,7 +1160,7 @@ static int process_snp(uint8_t pdu_type, struct isis_circuit *circuit,
 				     circuit->u.bc.adjdb[level - 1]))
 			return ISIS_OK; /* Silently discard */
 	} else {
-		if (!circuit->u.p2p.neighbor) {
+		if (!fabricd && !circuit->u.p2p.neighbor) {
 			zlog_warn("no p2p neighbor on circuit %s",
 				  circuit->interface->name);
 			return ISIS_OK; /* Silently discard */
@@ -1572,8 +1579,15 @@ int send_hello(struct isis_circuit *circuit, int level)
 		   && !circuit->disable_threeway_adj) {
 		uint32_t ext_circuit_id = circuit->idx;
 		if (circuit->u.p2p.neighbor) {
+			uint8_t threeway_state;
+
+			if (fabricd_initial_sync_is_in_progress(circuit->area)
+			    && fabricd_initial_sync_circuit(circuit->area) != circuit)
+				threeway_state = ISIS_THREEWAY_DOWN;
+			else
+				threeway_state = circuit->u.p2p.neighbor->threeway_state;
 			isis_tlvs_add_threeway_adj(tlvs,
-					circuit->u.p2p.neighbor->threeway_state,
+					threeway_state,
 					ext_circuit_id,
 					circuit->u.p2p.neighbor->sysid,
 					circuit->u.p2p.neighbor->ext_circuit_id);
@@ -1877,8 +1891,9 @@ int send_l1_csnp(struct thread *thread)
 
 	circuit->t_send_csnp[0] = NULL;
 
-	if (circuit->circ_type == CIRCUIT_T_BROADCAST
-	    && circuit->u.bc.is_dr[0]) {
+	if ((circuit->circ_type == CIRCUIT_T_BROADCAST
+	     && circuit->u.bc.is_dr[0])
+	     || circuit->circ_type == CIRCUIT_T_P2P) {
 		send_csnp(circuit, 1);
 	}
 	/* set next timer thread */
@@ -1899,8 +1914,9 @@ int send_l2_csnp(struct thread *thread)
 
 	circuit->t_send_csnp[1] = NULL;
 
-	if (circuit->circ_type == CIRCUIT_T_BROADCAST
-	    && circuit->u.bc.is_dr[1]) {
+	if ((circuit->circ_type == CIRCUIT_T_BROADCAST
+	     && circuit->u.bc.is_dr[1])
+             || circuit->circ_type == CIRCUIT_T_P2P) {
 		send_csnp(circuit, 2);
 	}
 	/* set next timer thread */
