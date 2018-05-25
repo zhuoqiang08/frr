@@ -51,6 +51,7 @@ eigrpd=no
 babeld=no
 sharpd=no
 pbrd=no
+fabricd=no
 #
 # Command line options for the daemons
 #
