@@ -1305,6 +1305,14 @@ DEFUN (show_isis_summary,
 		vty_out(vty, "Area %s:\n",
 			area->area_tag ? area->area_tag : "null");
 
+		if (fabricd) {
+			uint8_t tier = fabricd_tier(area);
+			if (tier == ISIS_TIER_UNDEFINED)
+				vty_out(vty, "  Tier: undefined\n");
+			else
+				vty_out(vty, "  Tier: %" PRIu8 "\n", tier);
+		}
+
 		if (listcount(area->area_addrs) > 0) {
 			struct area_addr *area_addr;
 			for (ALL_LIST_ELEMENTS_RO(area->area_addrs, node2,
