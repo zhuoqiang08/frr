@@ -712,4 +712,6 @@ struct list *fabricd_ip_addrs(struct isis_circuit *circuit)
 
 		return c->ip_addrs;
 	}
+
+	return NULL;
 }
