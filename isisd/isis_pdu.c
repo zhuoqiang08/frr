@@ -706,12 +706,35 @@ out:
 static int process_lsp(uint8_t pdu_type, struct isis_circuit *circuit,
 		       const uint8_t *ssnpa, uint8_t max_area_addrs)
 {
-	int level = (pdu_type == L1_LINK_STATE) ? ISIS_LEVEL1 : ISIS_LEVEL2;
+	int level;
+	bool circuit_scoped;
+
+	if (pdu_type == FS_LINK_STATE) {
+		if (!fabricd)
+			return ISIS_ERROR;
+		if (max_area_addrs != L2_CIRCUIT_FLOODING_SCOPE)
+			return ISIS_ERROR;
+		level = ISIS_LEVEL2;
+		circuit_scoped = true;
+
+		/* The stream is used verbatim for sending out new LSPDUs.
+		 * So make sure we store it as an L2 LSPDU internally.
+		 * (compare for the reverse in `send_lsp`) */
+		stream_putc_at(circuit->rcv_stream, 4, L2_LINK_STATE);
+		stream_putc_at(circuit->rcv_stream, 7, 0);
+	} else {
+		if (pdu_type == L1_LINK_STATE)
+			level = ISIS_LEVEL1;
+		else
+			level = ISIS_LEVEL2;
+		circuit_scoped = false;
+	}
 
 	if (isis->debugs & DEBUG_UPDATE_PACKETS) {
 		zlog_debug(
-			"ISIS-Upd (%s): Rcvd L%d LSP on %s, cirType %s, cirID %u",
-			circuit->area->area_tag, level,
+			"ISIS-Upd (%s): Rcvd %sL%d LSP on %s, cirType %s, cirID %u",
+			circuit->area->area_tag,
+			circuit_scoped ? "Circuit scoped " : "", level,
 			circuit->interface->name,
 			circuit_t2string(circuit->is_type),
 			circuit->circuit_id);
@@ -903,7 +926,8 @@ dontcheckadj:
 						   lsp_confusion);
 					tlvs = NULL;
 					/* ii */
-					lsp_flood(lsp, NULL);
+					if (!circuit_scoped)
+						lsp_flood(lsp, NULL);
 					/* v */
 					ISIS_FLAGS_CLEAR_ALL(
 						lsp->SSNflags); /* FIXME:
@@ -948,7 +972,8 @@ dontcheckadj:
 				/* our own LSP -> 7.3.16.4 c) */
 				if (comp == LSP_NEWER) {
 					lsp_inc_seqno(lsp, hdr.seqno);
-					lsp_flood(lsp, NULL);
+					if (!circuit_scoped)
+						lsp_flood(lsp, NULL);
 				} else {
 					isis_tx_queue_add(circuit->tx_queue,
 							  lsp, TX_LSP_NORMAL);
@@ -1031,7 +1056,8 @@ dontcheckadj:
 					   circuit->area, level, false);
 				tlvs = NULL;
 			}
-			lsp_flood(lsp, circuit);
+			if (!circuit_scoped)
+				lsp_flood(lsp, circuit);
 
 			/* iv */
 			if (circuit->circ_type != CIRCUIT_T_BROADCAST)
@@ -1338,6 +1364,7 @@ static int pdu_size(uint8_t pdu_type, uint8_t *size)
 		break;
 	case L1_LINK_STATE:
 	case L2_LINK_STATE:
+	case FS_LINK_STATE:
 		*size = ISIS_LSP_HDR_LEN;
 		break;
 	case L1_COMPLETE_SEQ_NUM:
@@ -1433,7 +1460,9 @@ int isis_handle_pdu(struct isis_circuit *circuit, uint8_t *ssnpa)
 	}
 
 	/* either 3 or 0 */
-	if (max_area_addrs != 0 && max_area_addrs != isis->max_area_addrs) {
+	if (pdu_type != FS_LINK_STATE /* FS PDU doesn't contain max area addr field */
+	    && max_area_addrs != 0
+	    && max_area_addrs != isis->max_area_addrs) {
 		zlog_err(
 			"maximumAreaAddressesMismatch: maximumAreaAdresses in a received PDU %" PRIu8
 			" while the parameter for this IS is %u",
@@ -1449,6 +1478,7 @@ int isis_handle_pdu(struct isis_circuit *circuit, uint8_t *ssnpa)
 		break;
 	case L1_LINK_STATE:
 	case L2_LINK_STATE:
+	case FS_LINK_STATE:
 		retval = process_lsp(pdu_type, circuit, ssnpa, max_area_addrs);
 		break;
 	case L1_COMPLETE_SEQ_NUM:
@@ -2140,6 +2170,11 @@ void send_lsp(void *arg, struct isis_lsp *lsp, enum isis_tx_type tx_type)
 
 	/* copy our lsp to the send buffer */
 	stream_copy(circuit->snd_stream, lsp->pdu);
+
+	if (tx_type == TX_LSP_CIRCUIT_SCOPED) {
+		stream_putc_at(circuit->snd_stream, 4, FS_LINK_STATE);
+		stream_putc_at(circuit->snd_stream, 7, L2_CIRCUIT_FLOODING_SCOPE);
+	}
 
 	if (isis->debugs & DEBUG_UPDATE_PACKETS) {
 		zlog_debug("ISIS-Upd (%s): Sending L%d LSP %s, seq 0x%08" PRIx32
