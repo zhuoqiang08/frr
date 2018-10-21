@@ -234,12 +234,30 @@ parts:
            - usr/lib/x86_64-linux-gnu/libssh.so*
         source: https://github.com/rtrlib/rtrlib.git
         source-type: git
-        source-tag: v0.5.0
+        source-tag: v0.6.0
         plugin: cmake
         configflags:
            - -DCMAKE_BUILD_TYPE=Release
+    libyang:
+        build-packages:
+           - cmake
+           - make
+           - gcc
+           - libpcre3-dev
+        stage-packages:
+           - libpcre3
+        prime:
+           - lib/x86_64-linux-gnu/libpcre.so*
+           - usr/lib/libyang.so*
+        source: https://github.com/opensourcerouting/libyang.git
+        source-type: git
+        source-branch: tmp
+        plugin: cmake
+        configflags:
+           - -DENABLE_LYD_PRIV=ON 
+           - -DCMAKE_BUILD_TYPE:String="Release"
     frr: 
-        after: [rtrlib]
+        after: [rtrlib, libyang]
         build-packages:
            - gcc
            - autoconf
@@ -267,12 +285,12 @@ parts:
            - python3-dev
            - protobuf-c-compiler
            - python3-sphinx
+           - install-info
         stage-packages:
            - coreutils
            - iproute2
            - logrotate
            - libcap2
-           - libc6
            - libtinfo5
            - libreadline6
            - libjson-c2
