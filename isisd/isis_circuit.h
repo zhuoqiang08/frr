@@ -81,7 +81,6 @@ struct isis_circuit {
 	struct thread *t_read;
 	struct thread *t_send_csnp[2];
 	struct thread *t_send_psnp[2];
-	struct thread *t_send_lsp;
 	struct isis_tx_queue *tx_queue;
 
 	/* there is no real point in two streams, just for programming kicker */
