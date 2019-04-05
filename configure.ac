@@ -91,20 +91,12 @@ AC_ARG_WITH([moduledir], [AS_HELP_STRING([--with-moduledir=DIR], [module directo
 ])
 AC_SUBST([moduledir], [$moduledir])
 
-
 AC_ARG_WITH([yangmodelsdir], [AS_HELP_STRING([--with-yangmodelsdir=DIR], [yang models directory (${datarootdir}/yang)])], [
 	yangmodelsdir="$withval"
 ], [
 	yangmodelsdir="\${datarootdir}/yang"
 ])
 AC_SUBST([yangmodelsdir])
-
-AC_ARG_WITH([libyang_pluginsdir], [AS_HELP_STRING([--with-libyang-pluginsdir=DIR], [yangmodule plugins directory (${libdir}/frr/libyang_plugins)])], [
-	libyang_pluginsdir="$withval"
-], [
-   libyang_pluginsdir="\${libdir}/frr/libyang_plugins"
-])
-AC_SUBST([libyang_pluginsdir])
 
 AC_ARG_ENABLE(tcmalloc,
 	AS_HELP_STRING([--enable-tcmalloc], [Turn on tcmalloc]),
@@ -1603,8 +1595,8 @@ AC_SUBST([SNMP_CFLAGS])
 dnl ---------------
 dnl libyang
 dnl ---------------
-PKG_CHECK_MODULES([LIBYANG], [libyang >= 0.16.7], , [
-  AC_MSG_ERROR([libyang (>= 0.16.7) was not found on your system.])
+PKG_CHECK_MODULES([LIBYANG], [libyang >= 1.0.8], , [
+  AC_MSG_ERROR([libyang (>= 1.0.8) was not found on your system.])
 ])
 ac_cflags_save="$CFLAGS"
 CFLAGS="$CFLAGS $LIBYANG_CFLAGS"
@@ -1615,24 +1607,6 @@ AC_CHECK_MEMBER([struct lyd_node.priv], [], [
   ])
 ], [[#include <libyang/libyang.h>]])
 CFLAGS="$ac_cflags_save"
-
-ac_libs_save="$LIBS"
-LIBS="$LIBS $LIBYANG_LIBS"
-AC_CHECK_FUNC([ly_register_types], [
-  libyang_ext_builtin=true
-  AC_DEFINE([LIBYANG_EXT_BUILTIN], [1], [have ly_register_types()])
-], [
-  libyang_ext_builtin=false
-  AC_MSG_WARN([===== old libyang (before 0.16.74) detected =====])
-  AC_MSG_WARN([The available version of libyang does not seem to support])
-  AC_MSG_WARN([built-in YANG extension modules.  This will cause "make check"])
-  AC_MSG_WARN([to fail and may create installation and version mismatch issues.])
-  AC_MSG_WARN([Support for the old mechanism will be removed at some point.])
-  AC_MSG_WARN([Please update libyang to version 0.16.74 or newer.])
-  AC_MSG_WARN([===== old libyang (before 0.16.74) detected =====])
-])
-AM_CONDITIONAL([LIBYANG_EXT_BUILTIN], [$libyang_ext_builtin])
-LIBS="$ac_libs_save"
 
 dnl ---------------
 dnl configuration rollbacks
@@ -2139,24 +2113,20 @@ CFG_SBIN="$sbindir"
 CFG_STATE="$frr_statedir"
 CFG_MODULE="$moduledir"
 CFG_YANGMODELS="$yangmodelsdir"
-CFG_LIBYANG_PLUGINS="$libyang_pluginsdir"
 for I in 1 2 3 4 5 6 7 8 9 10; do
 	eval CFG_SYSCONF="\"$CFG_SYSCONF\""
 	eval CFG_SBIN="\"$CFG_SBIN\""
 	eval CFG_STATE="\"$CFG_STATE\""
 	eval CFG_MODULE="\"$CFG_MODULE\""
 	eval CFG_YANGMODELS="\"$CFG_YANGMODELS\""
-	eval CFG_LIBYANG_PLUGINS="\"$CFG_LIBYANG_PLUGINS\""
 done
 AC_SUBST([CFG_SYSCONF])
 AC_SUBST([CFG_SBIN])
 AC_SUBST([CFG_STATE])
 AC_SUBST([CFG_MODULE])
 AC_SUBST([CFG_YANGMODELS])
-AC_SUBST([CFG_LIBYANG_PLUGINS])
 AC_DEFINE_UNQUOTED([MODULE_PATH], ["$CFG_MODULE"], [path to modules])
 AC_DEFINE_UNQUOTED([YANG_MODELS_PATH], ["$CFG_YANGMODELS"], [path to YANG data models])
-AC_DEFINE_UNQUOTED([LIBYANG_PLUGINS_PATH], ["$CFG_LIBYANG_PLUGINS"], [path to libyang plugins])
 AC_DEFINE_UNQUOTED([WATCHFRR_SH_PATH], ["${CFG_SBIN%/}/watchfrr.sh"], [path to watchfrr.sh])
 
 dnl ------------------------------------

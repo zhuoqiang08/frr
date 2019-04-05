@@ -23,14 +23,18 @@
 
 #include <libyang/user_types.h>
 
-static int ipv4_address_store_clb(const char *type_name, const char *value_str,
-				  lyd_val *value, char **err_msg)
+/* Storage for ID used to check plugin API version compatibility. */
+LYTYPE_VERSION_CHECK
+
+static int ipv4_address_store_clb(struct ly_ctx *ctx, const char *type_name,
+				  const char **value_str, lyd_val *value,
+				  char **err_msg)
 {
 	value->ptr = malloc(sizeof(struct in_addr));
 	if (!value->ptr)
 		return 1;
 
-	if (inet_pton(AF_INET, value_str, value->ptr) != 1) {
+	if (inet_pton(AF_INET, *value_str, value->ptr) != 1) {
 		free(value->ptr);
 		return 1;
 	}
@@ -38,14 +42,15 @@ static int ipv4_address_store_clb(const char *type_name, const char *value_str,
 	return 0;
 }
 
-static int ipv6_address_store_clb(const char *type_name, const char *value_str,
-				  lyd_val *value, char **err_msg)
+static int ipv6_address_store_clb(struct ly_ctx *ctx, const char *type_name,
+				  const char **value_str, lyd_val *value,
+				  char **err_msg)
 {
 	value->ptr = malloc(INET6_ADDRSTRLEN);
 	if (!value->ptr)
 		return 1;
 
-	if (inet_pton(AF_INET6, value_str, value->ptr) != 1) {
+	if (inet_pton(AF_INET6, *value_str, value->ptr) != 1) {
 		free(value->ptr);
 		return 1;
 	}
@@ -53,14 +58,15 @@ static int ipv6_address_store_clb(const char *type_name, const char *value_str,
 	return 0;
 }
 
-static int ipv4_prefix_store_clb(const char *type_name, const char *value_str,
-				 lyd_val *value, char **err_msg)
+static int ipv4_prefix_store_clb(struct ly_ctx *ctx, const char *type_name,
+				 const char **value_str, lyd_val *value,
+				 char **err_msg)
 {
 	value->ptr = malloc(sizeof(struct prefix_ipv4));
 	if (!value->ptr)
 		return 1;
 
-	if (str2prefix_ipv4(value_str, value->ptr) == 0) {
+	if (str2prefix_ipv4(*value_str, value->ptr) == 0) {
 		free(value->ptr);
 		return 1;
 	}
@@ -68,14 +74,15 @@ static int ipv4_prefix_store_clb(const char *type_name, const char *value_str,
 	return 0;
 }
 
-static int ipv6_prefix_store_clb(const char *type_name, const char *value_str,
-				 lyd_val *value, char **err_msg)
+static int ipv6_prefix_store_clb(struct ly_ctx *ctx, const char *type_name,
+				 const char **value_str, lyd_val *value,
+				 char **err_msg)
 {
 	value->ptr = malloc(sizeof(struct prefix_ipv6));
 	if (!value->ptr)
 		return 1;
 
-	if (str2prefix_ipv6(value_str, value->ptr) == 0) {
+	if (str2prefix_ipv6(*value_str, value->ptr) == 0) {
 		free(value->ptr);
 		return 1;
 	}
