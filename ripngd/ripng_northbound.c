@@ -217,7 +217,6 @@ static int ripngd_instance_network_create(enum nb_event event,
 
 	ripng = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv6p(&p, dnode, NULL);
-	apply_mask_ipv6((struct prefix_ipv6 *)&p);
 
 	return ripng_enable_network_add(ripng, &p);
 }
@@ -233,7 +232,6 @@ static int ripngd_instance_network_destroy(enum nb_event event,
 
 	ripng = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv6p(&p, dnode, NULL);
-	apply_mask_ipv6((struct prefix_ipv6 *)&p);
 
 	return ripng_enable_network_delete(ripng, &p);
 }
@@ -571,7 +569,6 @@ static int ripngd_instance_static_route_create(enum nb_event event,
 
 	ripng = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv6p(&p, dnode, NULL);
-	apply_mask_ipv6(&p);
 
 	ripng_redistribute_add(ripng, ZEBRA_ROUTE_RIPNG, RIPNG_ROUTE_STATIC, &p,
 			       0, NULL, 0);
@@ -590,7 +587,6 @@ static int ripngd_instance_static_route_destroy(enum nb_event event,
 
 	ripng = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv6p(&p, dnode, NULL);
-	apply_mask_ipv6(&p);
 
 	ripng_redistribute_delete(ripng, ZEBRA_ROUTE_RIPNG, RIPNG_ROUTE_STATIC,
 				  &p, 0);
@@ -614,7 +610,6 @@ ripngd_instance_aggregate_address_create(enum nb_event event,
 
 	ripng = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv6p(&p, dnode, NULL);
-	apply_mask_ipv6(&p);
 
 	ripng_aggregate_add(ripng, (struct prefix *)&p);
 
@@ -633,7 +628,6 @@ ripngd_instance_aggregate_address_destroy(enum nb_event event,
 
 	ripng = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv6p(&p, dnode, NULL);
-	apply_mask_ipv6(&p);
 
 	ripng_aggregate_delete(ripng, (struct prefix *)&p);
 

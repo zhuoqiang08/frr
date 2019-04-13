@@ -239,7 +239,6 @@ static int ripd_instance_distance_source_create(enum nb_event event,
 		return NB_OK;
 
 	yang_dnode_get_ipv4p(&prefix, dnode, "./prefix");
-	apply_mask_ipv4(&prefix);
 
 	/* Get RIP distance node. */
 	rip = yang_dnode_get_entry(dnode, true);
@@ -391,7 +390,6 @@ static int ripd_instance_network_create(enum nb_event event,
 
 	rip = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv4p(&p, dnode, NULL);
-	apply_mask_ipv4((struct prefix_ipv4 *)&p);
 
 	return rip_enable_network_add(rip, &p);
 }
@@ -407,7 +405,6 @@ static int ripd_instance_network_destroy(enum nb_event event,
 
 	rip = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv4p(&p, dnode, NULL);
-	apply_mask_ipv4((struct prefix_ipv4 *)&p);
 
 	return rip_enable_network_delete(rip, &p);
 }
@@ -798,7 +795,6 @@ static int ripd_instance_static_route_create(enum nb_event event,
 
 	rip = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv4p(&p, dnode, NULL);
-	apply_mask_ipv4(&p);
 
 	memset(&nh, 0, sizeof(nh));
 	nh.type = NEXTHOP_TYPE_IPV4;
@@ -819,7 +815,6 @@ static int ripd_instance_static_route_destroy(enum nb_event event,
 
 	rip = yang_dnode_get_entry(dnode, true);
 	yang_dnode_get_ipv4p(&p, dnode, NULL);
-	apply_mask_ipv4(&p);
 
 	rip_redistribute_delete(rip, ZEBRA_ROUTE_RIP, RIP_ROUTE_STATIC, &p, 0);
 
