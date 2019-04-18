@@ -514,42 +514,6 @@ void yang_dnode_change_leaf(struct lyd_node *dnode, const char *value)
 	lyd_change_leaf((struct lyd_node_leaf_list *)dnode, value);
 }
 
-void yang_dnode_set_entry(const struct lyd_node *dnode, void *entry)
-{
-	assert(CHECK_FLAG(dnode->schema->nodetype, LYS_LIST | LYS_CONTAINER));
-	lyd_set_private(dnode, entry);
-}
-
-void *yang_dnode_get_entry(const struct lyd_node *dnode,
-			   bool abort_if_not_found)
-{
-	const struct lyd_node *orig_dnode = dnode;
-	char xpath[XPATH_MAXLEN];
-
-	while (dnode) {
-		switch (dnode->schema->nodetype) {
-		case LYS_CONTAINER:
-		case LYS_LIST:
-			if (dnode->priv)
-				return dnode->priv;
-			break;
-		default:
-			break;
-		}
-
-		dnode = dnode->parent;
-	}
-
-	if (!abort_if_not_found)
-		return NULL;
-
-	yang_dnode_get_path(orig_dnode, xpath, sizeof(xpath));
-	flog_err(EC_LIB_YANG_DNODE_NOT_FOUND,
-		 "%s: failed to find entry [xpath %s]", __func__, xpath);
-	zlog_backtrace(LOG_ERR);
-	abort();
-}
-
 struct lyd_node *yang_dnode_new(struct ly_ctx *ly_ctx, bool config_only)
 {
 	struct lyd_node *dnode;
@@ -630,12 +594,6 @@ struct yang_data *yang_data_list_find(const struct list *list,
 	return NULL;
 }
 
-static void *ly_dup_cb(const void *priv)
-{
-	/* Make a shallow copy of the priv pointer. */
-	return (void *)priv;
-}
-
 /* Make libyang log its errors using FRR logging infrastructure. */
 static void ly_log_cb(LY_LOG_LEVEL level, const char *msg, const char *path)
 {
@@ -713,7 +671,6 @@ void yang_init(void)
 		flog_err(EC_LIB_LIBYANG, "%s: ly_ctx_new() failed", __func__);
 		exit(1);
 	}
-	ly_ctx_set_priv_dup_clb(ly_native_ctx, ly_dup_cb);
 
 	yang_translator_init();
 }
