@@ -535,7 +535,11 @@ static int vtysh_execute_func(const char *line, int pager)
 		} else if ((saved_node == KEYCHAIN_KEY_NODE
 			    || saved_node == LDP_PSEUDOWIRE_NODE
 			    || saved_node == LDP_IPV4_IFACE_NODE
-			    || saved_node == LDP_IPV6_IFACE_NODE)
+			    || saved_node == LDP_IPV6_IFACE_NODE
+			    || saved_node == PPR_NODE
+			    || saved_node == PPR_IPV4_NODE
+			    || saved_node == PPR_IPV6_NODE
+			    || saved_node == PPR_MPLS_NODE)
 			   && (tried == 1)) {
 			vtysh_execute("exit");
 		} else if (tried) {
@@ -1185,6 +1189,22 @@ static struct cmd_node isis_node = {
 	ISIS_NODE, "%s(config-router)# ",
 };
 
+static struct cmd_node ppr_node = {
+	PPR_NODE, "%s(config-ppr)# ",
+};
+
+static struct cmd_node ppr_ipv4_node = {
+	PPR_IPV4_NODE, "%s(config-ppr-ipv4)# ",
+};
+
+static struct cmd_node ppr_ipv6_node = {
+	PPR_IPV6_NODE, "%s(config-ppr-ipv6)# ",
+};
+
+static struct cmd_node ppr_mpls_node = {
+	PPR_MPLS_NODE, "%s(config-ppr-mpls)# ",
+};
+
 static struct cmd_node openfabric_node = {
 	OPENFABRIC_NODE, "%s(config-router)# ",
 };
@@ -1694,6 +1714,62 @@ DEFUNSH(VTYSH_ISISD, router_isis, router_isis_cmd, "router isis WORD",
 	return CMD_SUCCESS;
 }
 
+DEFUNSH(VTYSH_PPR, ppr_group, ppr_group_cmd,
+        "ppr group NAME",
+        "Preferred Path Routing\n"
+        "Preferred path group\n"
+        "PPR path group name\n")
+{
+	vty->node = PPR_NODE;
+	return CMD_SUCCESS;
+}
+
+DEFUNSH(VTYSH_PPR, ppr_id_ipv4,
+        ppr_id_ipv4_cmd,
+        "ppr-id ipv4 A.B.C.D/M prefix A.B.C.D/M [metric (0-4294967295)]",
+        "Preferred Path Routing\n"
+        "Preferred path using IPv4 data plane\n"
+        "PPR-ID address/mask\n"
+        "PPR-Prefix\n"
+        "IPv4 prefix\n"
+	"Metric of the path presented by the PPR-ID\n"
+	"Metric value\n")
+{
+	vty->node = PPR_IPV4_NODE;
+	return CMD_SUCCESS;
+}
+
+DEFUNSH(VTYSH_PPR, ppr_id_ipv6,
+        ppr_id_ipv6_cmd,
+        "ppr-id ipv6 X:X::X:X/M prefix X:X::X:X/M [metric (0-4294967295)]",
+        "Preferred Path Routing\n"
+        "Preferred path using IPv6 data plane\n"
+        "PPR-ID address/mask\n"
+        "PPR-Prefix\n"
+        "IPv6 prefix\n"
+	"Metric of the path presented by the PPR-ID\n"
+	"Metric value\n")
+{
+	vty->node = PPR_IPV6_NODE;
+	return CMD_SUCCESS;
+}
+
+DEFUNSH(VTYSH_PPR, ppr_id_mpls,
+        ppr_id_mpls_cmd,
+	"ppr-id mpls (16-1048575) prefix <A.B.C.D/M|X:X::X:X/M> [metric (0-4294967295)]",
+	"Preferred Path Routing ID\n"
+	"Preferred path using SR-MPLS data plane\n"
+	"MPLS label\n"
+	"PPR-Prefix\n"
+	"IPv4 prefix\n"
+	"IPv6 prefix\n"
+	"Metric of the path presented by the PPR-ID\n"
+	"Metric value\n")
+{
+	vty->node = PPR_MPLS_NODE;
+	return CMD_SUCCESS;
+}
+
 DEFUNSH(VTYSH_FABRICD, router_openfabric, router_openfabric_cmd, "router openfabric WORD",
 	ROUTER_STR
 	"OpenFabric routing protocol\n"
@@ -1802,6 +1878,7 @@ static int vtysh_exit(struct vty *vty)
 		vty->node = ENABLE_NODE;
 		break;
 	case INTERFACE_NODE:
+	case PPR_NODE:
 	case PW_NODE:
 	case VRF_NODE:
 	case NH_GROUP_NODE:
@@ -1868,6 +1945,11 @@ static int vtysh_exit(struct vty *vty)
 		break;
 	case BFD_PEER_NODE:
 		vty->node = BFD_NODE;
+		break;
+	case PPR_IPV4_NODE:
+	case PPR_IPV6_NODE:
+	case PPR_MPLS_NODE:
+		vty->node = PPR_NODE;
 		break;
 	default:
 		break;
@@ -2077,6 +2159,18 @@ DEFUNSH(VTYSH_ISISD, vtysh_quit_isisd, vtysh_quit_isisd_cmd, "quit",
 	"Exit current mode and down to previous mode\n")
 {
 	return vtysh_exit_isisd(self, vty, argc, argv);
+}
+
+DEFUNSH(VTYSH_PPR, vtysh_exit_ppr, vtysh_exit_ppr_cmd, "exit",
+	"Exit current mode and down to previous mode\n")
+{
+	return vtysh_exit(vty);
+}
+
+DEFUNSH(VTYSH_PPR, vtysh_quit_ppr, vtysh_quit_ppr_cmd, "quit",
+	"Exit current mode and down to previous mode\n")
+{
+	return vtysh_exit_ppr(self, vty, argc, argv);
 }
 
 #if HAVE_BFDD > 0
@@ -3583,6 +3677,10 @@ void vtysh_init_vty(void)
 	install_node(&link_params_node, NULL);
 	install_node(&vrf_node, NULL);
 	install_node(&nh_group_node, NULL);
+	install_node(&ppr_node, NULL);
+	install_node(&ppr_ipv4_node, NULL);
+	install_node(&ppr_ipv6_node, NULL);
+	install_node(&ppr_mpls_node, NULL);
 	install_node(&rmap_node, NULL);
 	install_node(&pbr_map_node, NULL);
 	install_node(&zebra_node, NULL);
@@ -3642,6 +3740,14 @@ void vtysh_init_vty(void)
 	install_element(CONFIG_NODE, &vtysh_exit_all_cmd);
 	install_element(VIEW_NODE, &vtysh_quit_all_cmd);
 	install_element(CONFIG_NODE, &vtysh_quit_all_cmd);
+	install_element(PPR_NODE, &vtysh_exit_ppr_cmd);
+	install_element(PPR_NODE, &vtysh_quit_ppr_cmd);
+	install_element(PPR_IPV4_NODE, &vtysh_exit_ppr_cmd);
+	install_element(PPR_IPV4_NODE, &vtysh_quit_ppr_cmd);
+	install_element(PPR_IPV6_NODE, &vtysh_exit_ppr_cmd);
+	install_element(PPR_IPV6_NODE, &vtysh_quit_ppr_cmd);
+	install_element(PPR_MPLS_NODE, &vtysh_exit_ppr_cmd);
+	install_element(PPR_MPLS_NODE, &vtysh_quit_ppr_cmd);
 	install_element(RIP_NODE, &vtysh_exit_ripd_cmd);
 	install_element(RIP_NODE, &vtysh_quit_ripd_cmd);
 	install_element(RIPNG_NODE, &vtysh_exit_ripngd_cmd);
@@ -3777,6 +3883,10 @@ void vtysh_init_vty(void)
 	install_element(KEYCHAIN_KEY_NODE, &vtysh_end_all_cmd);
 	install_element(RMAP_NODE, &vtysh_end_all_cmd);
 	install_element(PBRMAP_NODE, &vtysh_end_all_cmd);
+	install_element(PPR_NODE, &vtysh_end_all_cmd);
+	install_element(PPR_IPV4_NODE, &vtysh_end_all_cmd);
+	install_element(PPR_IPV6_NODE, &vtysh_end_all_cmd);
+	install_element(PPR_MPLS_NODE, &vtysh_end_all_cmd);
 	install_element(VTY_NODE, &vtysh_end_all_cmd);
 
 	install_element(INTERFACE_NODE, &vtysh_end_all_cmd);
@@ -3817,6 +3927,10 @@ void vtysh_init_vty(void)
 	install_element(CONFIG_NODE, &router_isis_cmd);
 	install_element(CONFIG_NODE, &router_openfabric_cmd);
 	install_element(CONFIG_NODE, &router_bgp_cmd);
+	install_element(CONFIG_NODE, &ppr_group_cmd);
+	install_element(PPR_NODE, &ppr_id_ipv4_cmd);
+	install_element(PPR_NODE, &ppr_id_ipv6_cmd);
+	install_element(PPR_NODE, &ppr_id_mpls_cmd);
 #ifdef KEEP_OLD_VPN_COMMANDS
 	install_element(BGP_NODE, &address_family_vpnv4_cmd);
 	install_element(BGP_NODE, &address_family_vpnv6_cmd);

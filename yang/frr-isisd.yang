@@ -19,6 +19,10 @@ module frr-isisd {
     prefix frr-route-types;
   }
 
+  import frr-ppr {
+    prefix frr-ppr;
+  }
+
   organization
     "Free Range Routing";
   contact
@@ -817,6 +821,29 @@ module frr-isisd {
                 "Configure last hop behavior.";
             }
           }
+        }
+      }
+
+      container ppr {
+        description
+          "ISIS PPR.";
+        leaf enable {
+          type boolean;
+          default false;
+          description
+           "Enable PPR.";
+        }
+        list ppr-advertise {
+          key "name";
+          leaf name {
+            type leafref {
+              path "/frr-ppr:ppr/frr-ppr:group/frr-ppr:name";
+            }
+            description
+              "PPR group name.";
+          }
+          description
+            "Enable PPR path advertisement.";
         }
       }
     }

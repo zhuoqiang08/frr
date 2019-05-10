@@ -93,6 +93,10 @@ const char *node_names[] = {
 	"vrf",			    // VRF_NODE,
 	"interface",		    // INTERFACE_NODE,
 	"nexthop-group",            // NH_GROUP_NODE,
+	"ppr",			    // PPR_NODE,
+	"ppr-ipv4",		    // PPR_IPV4_NODE,
+	"ppr-ipv6",		    // PPR_IPV6_NODE,
+	"ppr-mpls",		    // PPR_MPLS_NODE,
 	"zebra",		    // ZEBRA_NODE,
 	"table",		    // TABLE_NODE,
 	"rip",			    // RIP_NODE,
@@ -1002,6 +1006,11 @@ enum node_type node_parent(enum node_type node)
 	case BFD_PEER_NODE:
 		ret = BFD_NODE;
 		break;
+	case PPR_IPV4_NODE:
+	case PPR_IPV6_NODE:
+	case PPR_MPLS_NODE:
+		ret = PPR_NODE;
+		break;
 	default:
 		ret = CONFIG_NODE;
 		break;
@@ -1474,7 +1483,13 @@ void cmd_exit(struct vty *vty)
 	case PBRMAP_NODE:
 	case VTY_NODE:
 	case BFD_NODE:
+	case PPR_NODE:
 		vty->node = CONFIG_NODE;
+		break;
+	case PPR_IPV4_NODE:
+	case PPR_IPV6_NODE:
+	case PPR_MPLS_NODE:
+		vty->node = PPR_NODE;
 		break;
 	case BGP_IPV4_NODE:
 	case BGP_IPV4M_NODE:

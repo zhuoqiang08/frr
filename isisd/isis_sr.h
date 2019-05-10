@@ -25,6 +25,7 @@
 #ifndef _FRR_ISIS_SR_H
 #define _FRR_ISIS_SR_H
 
+#include "isisd/isisd.h"
 #include "isisd/isis_tlvs.h"
 
 #include "lib/mpls.h"
@@ -187,9 +188,18 @@ isis_sr_cfg_prefix_add(struct isis_area *area, const struct prefix *prefix);
 extern void isis_sr_cfg_prefix_del(struct sr_prefix_cfg *pcfg);
 extern struct sr_prefix_cfg *
 isis_sr_cfg_prefix_find(struct isis_area *area, union prefixconstptr prefix);
+extern struct sr_prefix_cfg *isis_sr_cfg_sid_find(struct isis_area *area,
+						  uint32_t sid);
 extern void isis_sr_prefix_cfg2subtlv(const struct sr_prefix_cfg *pcfg,
 				      bool external,
 				      struct isis_prefix_sid *psid);
+extern struct isis_route_info *
+isis_sr_prefix_lookup_route(struct isis_area *area, int tree_id,
+			    struct sr_prefix *srp);
+extern struct sr_prefix *isis_sr_prefix_sid_find_area(struct isis_area *area,
+						      int level, uint32_t sid);
+extern struct sr_node *isis_sr_node_find(struct isis_area *area, int level,
+					 const uint8_t *sysid);
 extern void isis_area_verify_sr(struct isis_area *area);
 extern int isis_sr_start(struct isis_area *area);
 extern void isis_sr_stop(struct isis_area *area);

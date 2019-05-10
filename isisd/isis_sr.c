@@ -174,6 +174,18 @@ struct sr_prefix_cfg *isis_sr_cfg_prefix_find(struct isis_area *area,
 	return tree_sr_prefix_cfg_find(&area->srdb.config.prefix_sids, &pcfg);
 }
 
+struct sr_prefix_cfg *isis_sr_cfg_sid_find(struct isis_area *area, uint32_t sid)
+{
+	struct sr_prefix_cfg *pcfg;
+
+	frr_each (tree_sr_prefix_cfg, &area->srdb.config.prefix_sids, pcfg) {
+		if (pcfg->sid == sid)
+			return pcfg;
+	}
+
+	return NULL;
+}
+
 void isis_sr_prefix_cfg2subtlv(const struct sr_prefix_cfg *pcfg, bool external,
 			       struct isis_prefix_sid *psid)
 {
@@ -265,6 +277,20 @@ static struct sr_prefix *isis_sr_prefix_find_node(struct sr_node *srn,
 	return tree_sr_node_prefix_find(&srn->prefix_sids, &srp);
 }
 
+struct sr_prefix *isis_sr_prefix_sid_find_area(struct isis_area *area,
+					       int level, uint32_t sid)
+{
+	struct sr_prefix *srp;
+
+	frr_each (tree_sr_area_prefix, &area->srdb.prefix_sids[level - 1],
+		  srp) {
+		if (srp->sid.value == sid)
+			return srp;
+	}
+
+	return NULL;
+}
+
 static struct sr_node *isis_sr_node_add(struct isis_area *area, int level,
 					const uint8_t *sysid,
 					const struct isis_srgb *srgb)
@@ -297,8 +323,8 @@ static void isis_sr_node_del(struct isis_area *area, int level,
 	XFREE(MTYPE_ISIS_SR_INFO, srn);
 }
 
-static struct sr_node *isis_sr_node_find(struct isis_area *area, int level,
-					 const uint8_t *sysid)
+struct sr_node *isis_sr_node_find(struct isis_area *area, int level,
+				  const uint8_t *sysid)
 {
 	struct sr_node srn = {};
 
@@ -376,9 +402,9 @@ static mpls_label_t isis_sr_prefix_out_label(const struct sr_prefix *srp,
 	return (srn_nexthop->srgb.lower_bound + srp->sid.value);
 }
 
-static struct isis_route_info *
-isis_sr_prefix_lookup_route(struct isis_area *area, enum spf_tree_id tree_id,
-			    struct sr_prefix *srp)
+struct isis_route_info *isis_sr_prefix_lookup_route(struct isis_area *area,
+						    int tree_id,
+						    struct sr_prefix *srp)
 {
 	struct route_node *rn;
 	int level = srp->srn->level;

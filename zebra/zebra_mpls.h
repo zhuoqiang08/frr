@@ -430,6 +430,7 @@ static inline uint8_t lsp_distance(enum lsp_types_t type)
 	case ZEBRA_LSP_SHARP:
 	case ZEBRA_LSP_OSPF_SR:
 	case ZEBRA_LSP_ISIS_SR:
+	case ZEBRA_LSP_ISIS_PPR:
 		return 150;
 	}
 
@@ -481,6 +482,7 @@ static inline int re_type_from_lsp_type(enum lsp_types_t lsp_type)
 	case ZEBRA_LSP_OSPF_SR:
 		return ZEBRA_ROUTE_OSPF;
 	case ZEBRA_LSP_ISIS_SR:
+	case ZEBRA_LSP_ISIS_PPR:
 		return ZEBRA_ROUTE_ISIS;
 	case ZEBRA_LSP_NONE:
 		return ZEBRA_ROUTE_KERNEL;
@@ -511,6 +513,8 @@ static inline const char *nhlfe_type2str(enum lsp_types_t lsp_type)
 		return "SR (OSPF)";
 	case ZEBRA_LSP_ISIS_SR:
 		return "SR (IS-IS)";
+	case ZEBRA_LSP_ISIS_PPR:
+		return "PPR (IS-IS)";
 	case ZEBRA_LSP_SHARP:
 		return "SHARP";
 	case ZEBRA_LSP_NONE:

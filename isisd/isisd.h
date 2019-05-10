@@ -33,6 +33,7 @@
 #include "isisd/isis_sr.h"
 #include "isis_flags.h"
 #include "isis_lsp.h"
+#include "isis_ppr.h"
 #include "isis_memory.h"
 #include "qobj.h"
 
@@ -168,6 +169,8 @@ struct isis_area {
 	struct mpls_te_area *mta;
 	/* Segment Routing information */
 	struct isis_sr_db srdb;
+	/* PPR information. */
+	struct isis_ppr_db pprdb;
 	int ipv6_circuits;
 	bool purge_originator;
 	/* Counters */
@@ -287,6 +290,7 @@ extern struct thread_master *master;
 #define DEBUG_BFD                        (1<<10)
 #define DEBUG_TX_QUEUE                   (1<<11)
 #define DEBUG_SR                         (1<<12)
+#define DEBUG_PPR                        (1<<13)
 
 #define lsp_debug(...)                                                         \
 	do {                                                                   \

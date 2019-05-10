@@ -11,6 +11,7 @@ vtysh_scan += \
 	$(top_srcdir)/isisd/isis_redist.c \
 	$(top_srcdir)/isisd/isis_spf.c \
 	$(top_srcdir)/isisd/isis_te.c \
+	$(top_srcdir)/isisd/isis_ppr.c \
 	$(top_srcdir)/isisd/isis_vty_fabricd.c \
 	$(top_srcdir)/isisd/isisd.c \
 	# end
@@ -42,6 +43,7 @@ noinst_HEADERS += \
 	isisd/isis_network.h \
 	isisd/isis_pdu.h \
 	isisd/isis_pdu_counter.h \
+	isisd/isis_ppr.h \
 	isisd/isis_redist.h \
 	isisd/isis_route.h \
 	isisd/isis_routemap.h \
@@ -74,6 +76,7 @@ LIBISIS_SOURCES = \
 	isisd/isis_mt.c \
 	isisd/isis_pdu.c \
 	isisd/isis_pdu_counter.c \
+	isisd/isis_ppr.c \
 	isisd/isis_redist.c \
 	isisd/isis_route.c \
 	isisd/isis_routemap.c \
@@ -107,11 +110,14 @@ isisd_libisis_a_SOURCES = \
 
 isisd/isis_cli_clippy.c: $(CLIPPY_DEPS)
 isisd/isis_cli.$(OBJEXT): isisd/isis_cli_clippy.c
+isisd/isis_ppr_clippy.c: $(CLIPPY_DEPS)
+isisd/isis_ppr.$(OBJEXT): isisd/isis_ppr_clippy.c
 
 isisd_isisd_LDADD = isisd/libisis.a $(ISIS_LDADD_COMMON)
 isisd_isisd_SOURCES = $(ISIS_SOURCES)
 nodist_isisd_isisd_SOURCES = \
 	yang/frr-isisd.yang.c \
+	yang/frr-ppr.yang.c \
 	# end
 	
 # Building fabricd

@@ -63,6 +63,10 @@ void cli_show_isis_mpls_te(struct vty *vty, struct lyd_node *dnode,
 			   bool show_defaults);
 void cli_show_isis_mpls_te_router_addr(struct vty *vty, struct lyd_node *dnode,
 				       bool show_defaults);
+void cli_show_isis_ppr_enable(struct vty *vty, struct lyd_node *dnode,
+			      bool show_defaults);
+void cli_show_isis_ppr_advertise(struct vty *vty, struct lyd_node *dnode,
+				 bool show_defaults);
 void cli_show_isis_def_origin_ipv4(struct vty *vty, struct lyd_node *dnode,
 				   bool show_defaults);
 void cli_show_isis_def_origin_ipv6(struct vty *vty, struct lyd_node *dnode,

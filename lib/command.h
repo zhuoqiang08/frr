@@ -102,6 +102,10 @@ enum node_type {
 	VRF_NODE,		 /* VRF mode node. */
 	INTERFACE_NODE,		 /* Interface mode node. */
 	NH_GROUP_NODE,		 /* Nexthop-Group mode node. */
+	PPR_NODE,		 /* PPR mode */
+	PPR_IPV4_NODE,		 /* PPR IPv4 mode */
+	PPR_IPV6_NODE,		 /* PPR IPv6 mode */
+	PPR_MPLS_NODE,		 /* PPR MPLS mode */
 	ZEBRA_NODE,		 /* zebra connection node. */
 	TABLE_NODE,		 /* rtm_table selection node. */
 	RIP_NODE,		 /* RIP protocol mode node. */
