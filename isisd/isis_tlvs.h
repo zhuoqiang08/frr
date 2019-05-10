@@ -24,6 +24,7 @@
 #define ISIS_TLVS_H
 
 #include "openbsd-tree.h"
+#include "ppr.h"
 #include "prefix.h"
 
 struct lspdb_head;
@@ -196,6 +197,68 @@ struct isis_purge_originator {
 	uint8_t sender[6];
 };
 
+/* PPR */
+struct isis_ppr_tlv {
+	struct isis_ppr_tlv *next;
+
+	uint16_t flags;
+	uint8_t fragment_id;
+	uint16_t mtid;
+	uint8_t algorithm;
+
+	struct isis_subtlvs *subtlvs;
+};
+#define ISIS_PPR_TLV_FIXED_SIZE 6
+
+#define ISIS_PPR_FLAG_FLOOD	0x8000
+#define ISIS_PPR_FLAG_DOWN	0x4000
+#define ISIS_PPR_FLAG_ATTACH	0x2000
+#define ISIS_PPR_FLAG_ULT	0x1000
+#define ISIS_PPR_FLAGS_MASK	0xf000
+
+/* PPR-Prefix */
+struct isis_ppr_prefix_stlv {
+	struct prefix prefix;
+	/* PPR-Prefix Sub-TLVs - none defined so far. */
+};
+#define ISIS_PPR_PREFIX_STLV_FIXED_SIZE 2
+
+/* PPR-ID */
+struct isis_ppr_id_stlv {
+	struct ppr_id info;
+	uint16_t flags;
+};
+#define ISIS_PPR_ID_STLV_FIXED_SIZE 5
+#define ISIS_PPR_ID_FLAGS_MASK 0x0000
+
+/* PPR-PDE */
+struct isis_ppr_pde_stlv {
+	struct isis_ppr_pde_stlv *next;
+
+	struct ppr_pde info;
+	uint16_t flags;
+
+	struct isis_subtlvs *subtlvs;
+};
+#define ISIS_PPR_PDE_STLV_FIXED_SIZE 5
+
+#define ISIS_PPR_PDE_FLAG_LOOSE		0x8000
+#define ISIS_PPR_PDE_FLAG_NODE		0x4000
+#define ISIS_PPR_PDE_FLAG_EGRESS	0x2000
+#define ISIS_PPR_PDE_FLAGS_MASK		0xe000
+
+/* PPR-Attribute */
+struct isis_ppr_attr_stlv {
+	struct isis_ppr_attr_stlv *next;
+
+	unsigned int type;
+	union {
+		struct in_addr rid_v4;
+		struct in6_addr rid_v6;
+		uint32_t metric;
+	} value;
+};
+
 enum isis_auth_result {
 	ISIS_AUTH_OK = 0,
 	ISIS_AUTH_TYPE_FAILURE,
@@ -234,6 +297,7 @@ struct isis_tlvs {
 	struct isis_mt_item_list mt_ipv6_reach;
 	struct isis_threeway_adj *threeway_adj;
 	struct isis_spine_leaf *spine_leaf;
+	struct isis_item_list ppr;
 };
 
 #define ISIS_PREFIX_SID_READVERTISED  0x80
@@ -258,6 +322,8 @@ enum isis_tlv_context {
 	ISIS_CONTEXT_SUBTLV_NE_REACH,
 	ISIS_CONTEXT_SUBTLV_IP_REACH,
 	ISIS_CONTEXT_SUBTLV_IPV6_REACH,
+	ISIS_CONTEXT_SUBTLV_PPR,
+	ISIS_CONTEXT_SUBTLV_PPR_PDE,
 	ISIS_CONTEXT_MAX
 };
 
@@ -268,6 +334,21 @@ struct isis_subtlvs {
 	struct prefix_ipv6 *source_prefix;
 	/* draft-ietf-isis-segment-routing-extensions-16 */
 	struct isis_item_list prefix_sids;
+	/* draft-chunduri-lsr-isis-preferred-path-routing-04 */
+	struct {
+		struct isis_ppr_prefix_stlv *prefix;
+		struct isis_ppr_id_stlv *id;
+		struct isis_item_list pdes;
+		struct {
+			struct isis_ppr_attr_stlv *rid_v4;
+			struct isis_ppr_attr_stlv *rid_v6;
+			struct isis_ppr_attr_stlv *metric;
+#if 0
+			struct isis_ppr_attr_stlv *stats_pkts;
+			struct isis_ppr_attr_stlv *stats_bytes;
+#endif
+		} attr;
+	} ppr;
 };
 
 enum isis_tlv_type {
@@ -288,6 +369,7 @@ enum isis_tlv_type {
 	ISIS_TLV_EXTENDED_IP_REACH = 135,
 	ISIS_TLV_DYNAMIC_HOSTNAME = 137,
 	ISIS_TLV_SPINE_LEAF_EXT = 150,
+	ISIS_TLV_PPR = 155,
 	ISIS_TLV_MT_REACH = 222,
 	ISIS_TLV_MT_ROUTER_INFO = 229,
 	ISIS_TLV_IPV6_ADDRESS = 232,
@@ -298,7 +380,18 @@ enum isis_tlv_type {
 	ISIS_TLV_MAX = 256,
 
 	ISIS_SUBTLV_PREFIX_SID = 3,
-	ISIS_SUBTLV_IPV6_SOURCE_PREFIX = 22
+	ISIS_SUBTLV_IPV6_SOURCE_PREFIX = 22,
+
+	ISIS_SUBTLV_PPR_PREFIX = 1,
+	ISIS_SUBTLV_PPR_ID = 2,
+	ISIS_SUBTLV_PPR_PDE = 3,
+	ISIS_SUBTLV_PPR_ATTR_RID_V4 = 5,
+	ISIS_SUBTLV_PPR_ATTR_RID_V6 = 6,
+	ISIS_SUBTLV_PPR_ATTR_METRIC = 7,
+#if 0
+	ISIS_SUBTLV_PPR_ATTR_STATS_PKTS = 8,
+	ISIS_SUBTLV_PPR_ATTR_STATS_BYTES = 9,
+#endif
 };
 
 #define IS_COMPAT_MT_TLV(tlv_type)                                             \
@@ -339,6 +432,8 @@ void isis_tlvs_set_protocols_supported(struct isis_tlvs *tlvs,
 				       struct nlpids *nlpids);
 void isis_tlvs_add_mt_router_info(struct isis_tlvs *tlvs, uint16_t mtid,
 				  bool overload, bool attached);
+struct isis_area;
+void isis_tlvs_add_ppr(struct isis_tlvs *tlvs, const struct isis_area *area);
 void isis_tlvs_add_ipv4_address(struct isis_tlvs *tlvs, struct in_addr *addr);
 void isis_tlvs_add_ipv4_addresses(struct isis_tlvs *tlvs,
 				  struct list *addresses);

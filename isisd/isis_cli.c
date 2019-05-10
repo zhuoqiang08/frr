@@ -1299,6 +1299,62 @@ void cli_show_isis_mt_ipv6_dstsrc(struct vty *vty, struct lyd_node *dnode,
 }
 
 /*
+ * XPath: /frr-isisd:isis/instance/ppr/enable
+ */
+DEFPY (isis_ppr_on,
+       isis_ppr_on_cmd,
+       "[no] ppr on",
+       NO_STR
+       "Preferred Path Routing\n"
+       "Enable Preferred Path Routing\n")
+{
+	nb_cli_enqueue_change(vty, "./ppr/enable", NB_OP_MODIFY,
+			      no ? "false" : "true");
+
+	return nb_cli_apply_changes(vty, NULL);
+}
+
+void cli_show_isis_ppr_enable(struct vty *vty, struct lyd_node *dnode,
+			      bool show_defaults)
+{
+	if (!yang_dnode_get_bool(dnode, NULL))
+		vty_out(vty, " no");
+
+	vty_out(vty, " ppr on\n");
+}
+
+/*
+ * XPath: /frr-isisd:isis/instance/ppr/ppr-advertise
+ */
+DEFPY (isis_ppr_advertise,
+       isis_ppr_advertise_cmd,
+       "[no] ppr advertise GROUP$group",
+       NO_STR
+       "Preferred Path Routing\n"
+       "Enable PPR path advertisement\n"
+       "PPR group name\n")
+{
+	char base_xpath[XPATH_MAXLEN];
+
+	snprintf(base_xpath, XPATH_MAXLEN, "./ppr/ppr-advertise[name='%s']",
+		 group);
+
+	if (no)
+		nb_cli_enqueue_change(vty, ".", NB_OP_DESTROY, NULL);
+	else
+		nb_cli_enqueue_change(vty, ".", NB_OP_CREATE, NULL);
+
+	return nb_cli_apply_changes(vty, base_xpath);
+}
+
+void cli_show_isis_ppr_advertise(struct vty *vty, struct lyd_node *dnode,
+				 bool show_defaults)
+{
+	vty_out(vty, " ppr advertise %s\n",
+		yang_dnode_get_string(dnode, "./name"));
+}
+
+/*
  * XPath: /frr-interface:lib/interface/frr-isisd:isis/passive
  */
 DEFPY(isis_passive, isis_passive_cmd, "[no] isis passive",
@@ -2028,6 +2084,8 @@ void isis_cli_init(void)
 	install_element(ISIS_NODE, &isis_redistribute_cmd);
 
 	install_element(ISIS_NODE, &isis_topology_cmd);
+	install_element(ISIS_NODE, &isis_ppr_on_cmd);
+	install_element(ISIS_NODE, &isis_ppr_advertise_cmd);
 
 	install_element(INTERFACE_NODE, &isis_passive_cmd);
 

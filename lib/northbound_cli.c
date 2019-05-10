@@ -442,9 +442,12 @@ static int nb_cli_candidate_load_transaction(struct vty *vty,
  */
 static struct lyd_node *ly_iter_next_up(const struct lyd_node *elem)
 {
+	/* TODO: review this. */
+#if 0
 	/* Are we going downwards? Is this still not a leaf? */
 	if (!(elem->schema->nodetype & (LYS_LEAF | LYS_LEAFLIST | LYS_ANYDATA)))
 		return NULL;
+#endif
 
 	/* Are there still leaves in this branch? */
 	if (elem->next != NULL)

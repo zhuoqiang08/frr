@@ -1,0 +1,223 @@
+module frr-ppr {
+  yang-version 1.1;
+  namespace "http://frrouting.org/yang/ppr";
+  prefix frr-ppr;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  organization
+    "Free Range Routing";
+  contact
+    "FRR Users List: <mailto:frog@lists.frrouting.org> FRR Development
+     List: <mailto:dev@lists.frrouting.org>";
+  description
+    "This Yang module defines the configuration and operational
+     state for Preferred Path Routing.";
+
+  revision 2019-06-24 {
+    description
+      "Initial revision.";
+    reference
+      "RFC XXXX: A YANG Data Model for PPR.";
+  }
+
+  /* Types. */
+  typedef ppr-pde-type {
+    type enumeration {
+      enum topological {
+        value "1";
+        description "Topological PPR PDE.";
+      }
+      enum non-topological {
+        value "2";
+        description "Non-Topological PPR PED.";
+      }
+    }
+  }
+
+  typedef ppr-pde-id-type {
+    type enumeration {
+      enum sidlabel {
+        value "1";
+        description
+          "PPR ID in mpls label format.";
+      }
+      enum prefix-sid {
+        value "2";
+        description
+          "SR-MPLS prefix SID.";
+      }
+      enum adj-sid {
+        value "3";
+        description
+          "SR-MPLS adjacency SID.";
+      }
+      enum ipv4-node {
+        value "4";
+        description
+          "IPv4 node address.";
+      }
+      enum ipv4-interface {
+        value "5";
+        description
+          "IPv4 interface address.";
+      }
+      enum ipv6-node {
+        value "6";
+        description
+          "IPv6 node address.";
+      }
+      enum ipv6-interface {
+        value "7";
+        description
+          "IPv6 P2P interface address.";
+      }
+      enum srv6-node-sid {
+        value "8";
+        description
+          "PDE ID in SRv6 node SID format.";
+      }
+      enum srv6-adj-sid {
+        value "9";
+        description
+          "PDE ID in SRv6 node SID format.";
+      }
+    }
+    description "Type of PPR ID.";
+  }
+
+  /* Groupings*/
+  grouping ppr-attributes {
+    leaf count-packets {
+      type boolean;
+      description
+        "create a counter to count number of packets
+         forwarded on this PPR-ID on each node in the
+         path description.";
+      default false;
+    }
+    leaf count-bytes {
+      type boolean;
+      description
+        "create a conter to count number of bytes.";
+      default false;
+    }
+    leaf ppr-metric {
+      type uint32;
+      description
+        "Metric of the path presented by the PPR-ID.";
+    }
+  }
+
+  container ppr {
+    description
+      "Preferred path routing configuration.";
+
+    list group {
+      key "name";
+      description
+        "Preferred path groups.";
+
+      leaf name {
+        type string;
+        description "PPR path group name.";
+      }
+
+      list ipv4 {
+        key "ppr-id";
+        description
+          "List of preferred path using IPv4 data plane.";
+        leaf ppr-id {
+          type string;
+          description
+            "PPR ID, IPv4 address format.";
+        }
+        leaf ppr-prefix {
+          type inet:ipv4-prefix;
+          description
+            "PPR Prefix representing the destination of the path.";
+          mandatory true;
+        }
+        list ppr-pde {
+          key "pde-id";
+          ordered-by user;
+          leaf pde-id {
+            type string;
+            description
+              "List of PPR Path Description Element (PDE).";
+          }
+          leaf pde-id-type {
+            type ppr-pde-id-type;
+            description
+              "PDE forwarding identifier type.";
+            mandatory true;
+          }
+          leaf loose {
+            type boolean;
+            description
+              "If set, the next topological PDE is loose.";
+            default false;
+          }
+          leaf pde-type {
+            type ppr-pde-type;
+            description "PPR PDE type.";
+            mandatory true;
+          }
+        }
+        container attributes {
+          uses ppr-attributes;
+          description "PPR attributes.";
+        }
+      }
+
+      list ipv6 {
+        key "ppr-id";
+        description
+          "List of preferred path using IPv6 data plane.";
+        leaf ppr-id {
+          type string;
+          description
+            "PPR ID, IPv6 address format.";
+        }
+        leaf ppr-prefix {
+          type inet:ipv6-prefix;
+          description
+            "The prefix at the tail-end of the advertised PPR.";
+          mandatory true;
+        }
+        list ppr-pde {
+          key "pde-id";
+          ordered-by user;
+          leaf pde-id {
+            type string;
+            description
+              "List of PPR Path Description Element (PDE).";
+          }
+          leaf pde-id-type {
+            type ppr-pde-id-type;
+            description
+              "PDE forwarding identifier type.";
+            mandatory true;
+          }
+          leaf loose {
+            type boolean;
+            description
+              "If set, the next topological PDE is loose.";
+            default false;
+          }
+          leaf pde-type {
+            type ppr-pde-type;
+            description "PPR PDE type.";
+            mandatory true;
+          }
+        }
+        container attributes {
+          uses ppr-attributes;
+          description "PPR attributes.";
+        }
+      }
+    }
+  }
+}

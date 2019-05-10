@@ -32,6 +32,7 @@
 #include "isisd/isis_circuit.h"
 #include "isis_flags.h"
 #include "isis_lsp.h"
+#include "isis_ppr.h"
 #include "isis_memory.h"
 #include "qobj.h"
 
@@ -167,6 +168,8 @@ struct isis_area {
 	struct list *mt_settings;
 	/* MPLS-TE settings */
 	struct mpls_te_area *mta;
+	/* PPR information. */
+	struct isis_ppr_db pprdb;
 	int ipv6_circuits;
 	bool purge_originator;
 	/* Counters */
@@ -281,6 +284,7 @@ extern struct thread_master *master;
 #define DEBUG_FLOODING                   (1<<9)
 #define DEBUG_BFD                        (1<<10)
 #define DEBUG_TX_QUEUE                   (1<<11)
+#define DEBUG_PPR                        (1<<12)
 
 #define lsp_debug(...)                                                         \
 	do {                                                                   \

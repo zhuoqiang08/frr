@@ -62,6 +62,7 @@ lib_libfrr_la_SOURCES = \
 	lib/openbsd-tree.c \
 	lib/pid_output.c \
 	lib/plist.c \
+	lib/ppr.c \
 	lib/prefix.c \
 	lib/privs.c \
 	lib/ptm_lib.c \
@@ -114,6 +115,7 @@ vtysh_scan += \
 	$(top_srcdir)/lib/keychain.c \
 	$(top_srcdir)/lib/nexthop_group.c \
 	$(top_srcdir)/lib/plist.c \
+	$(top_srcdir)/lib/ppr.c \
 	$(top_srcdir)/lib/routemap.c \
 	$(top_srcdir)/lib/vrf.c \
 	$(top_srcdir)/lib/vty.c \
@@ -130,6 +132,8 @@ lib/if_clippy.c: $(CLIPPY_DEPS)
 lib/if.lo: lib/if_clippy.c
 lib/plist_clippy.c: $(CLIPPY_DEPS)
 lib/plist.lo: lib/plist_clippy.c
+lib/ppr_clippy.c: $(CLIPPY_DEPS)
+lib/ppr.lo: lib/ppr_clippy.c
 lib/nexthop_group_clippy.c: $(CLIPPY_DEPS)
 lib/nexthop_group.lo: lib/nexthop_group_clippy.c
 lib/northbound_cli_clippy.c: $(CLIPPY_DEPS)
@@ -199,6 +203,7 @@ pkginclude_HEADERS += \
 	lib/openbsd-queue.h \
 	lib/openbsd-tree.h \
 	lib/plist.h \
+	lib/ppr.h \
 	lib/prefix.h \
 	lib/printfrr.h \
 	lib/privs.h \

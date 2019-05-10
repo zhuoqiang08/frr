@@ -98,6 +98,7 @@ void sigusr1(void);
 
 static __attribute__((__noreturn__)) void terminate(int i)
 {
+	isis_ppr_term();
 	isis_zebra_stop();
 	exit(i);
 }
@@ -165,6 +166,7 @@ static const struct frr_yang_module_info *isisd_yang_modules[] = {
 	&frr_interface_info,
 #ifndef FABRICD
 	&frr_isisd_info,
+	&frr_ppr_info,
 #endif /* ifndef FABRICD */
 };
 
@@ -239,6 +241,7 @@ int main(int argc, char **argv, char **envp)
 	isis_redist_init();
 	isis_route_map_init();
 	isis_mpls_te_init();
+	isis_ppr_init();
 	lsp_init();
 	mt_init();
 
