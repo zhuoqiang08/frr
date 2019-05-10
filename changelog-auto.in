@@ -3,6 +3,11 @@ frr (@VERSION@-0) UNRELEASED; urgency=medium
   * autoconf changelog entry -- for git autobuilds only.
     remove and replace when creating releases!
     (tools/tarsource.sh will handle this)
+
+ -- FRRouting-Dev <dev@lists.frrouting.org>  Fri, 10 May 2019 12:40:00 +0200
+
+frr (7.0.1-0) testing; urgency=medium
+
   * bgp:
   *   Don't send Updates with BGP Max-Prefix Overflow
   *   Make sure `next-hop-self all` backward compatible with force
@@ -41,7 +46,7 @@ frr (@VERSION@-0) UNRELEASED; urgency=medium
   * watchfrr: Silently ignore declare failures (for backward compatibility)
   * RPM packages: Switch to new init script
 
- -- FRRouting-Dev <dev@lists.frrouting.org>  Wed,  8 May 2019 12:00:00 +0200
+ -- Martin Winter <mwinter@opensourcerouting.org>  Fri, 10 May 2019 12:30:00 +0200
 
 frr (7.0-0) testing; urgency=medium
 
