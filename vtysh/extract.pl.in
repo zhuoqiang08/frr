@@ -126,6 +126,9 @@ sub scan_file {
                 $protocol = "VTYSH_RIPD";
             }
         }
+        elsif ($file =~ /lib\/ppr\.c$/) {
+            $protocol = "VTYSH_PPR";
+        }
         elsif ($file =~ /lib\/vty\.c$/) {
            $protocol = "VTYSH_ALL";
         }

@@ -279,6 +279,14 @@ int isis_instance_segment_routing_prefix_sid_map_prefix_sid_sid_value_modify(
 int isis_instance_segment_routing_prefix_sid_map_prefix_sid_last_hop_behavior_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
+int isis_instance_ppr_enable_modify(enum nb_event event,
+				    const struct lyd_node *dnode,
+				    union nb_resource *resource);
+int isis_instance_ppr_ppr_advertise_create(enum nb_event event,
+					   const struct lyd_node *dnode,
+					   union nb_resource *resource);
+int isis_instance_ppr_ppr_advertise_destroy(enum nb_event event,
+					    const struct lyd_node *dnode);
 int lib_interface_isis_create(enum nb_event event, const struct lyd_node *dnode,
 			      union nb_resource *resource);
 int lib_interface_isis_destroy(enum nb_event event,
@@ -484,6 +492,10 @@ void cli_show_isis_mpls_te(struct vty *vty, struct lyd_node *dnode,
 			   bool show_defaults);
 void cli_show_isis_mpls_te_router_addr(struct vty *vty, struct lyd_node *dnode,
 				       bool show_defaults);
+void cli_show_isis_ppr_enable(struct vty *vty, struct lyd_node *dnode,
+			      bool show_defaults);
+void cli_show_isis_ppr_advertise(struct vty *vty, struct lyd_node *dnode,
+				 bool show_defaults);
 void cli_show_isis_def_origin_ipv4(struct vty *vty, struct lyd_node *dnode,
 				   bool show_defaults);
 void cli_show_isis_def_origin_ipv6(struct vty *vty, struct lyd_node *dnode,

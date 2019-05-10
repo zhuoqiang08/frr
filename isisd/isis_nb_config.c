@@ -1754,6 +1754,78 @@ int isis_instance_segment_routing_prefix_sid_map_prefix_sid_last_hop_behavior_mo
 }
 
 /*
+ * XPath: /frr-isisd:isis/instance/ppr/enable
+ */
+int isis_instance_ppr_enable_modify(enum nb_event event,
+				    const struct lyd_node *dnode,
+				    union nb_resource *resource)
+{
+	struct isis_area *area;
+
+	switch (event) {
+	case NB_EV_VALIDATE:
+		if (yang_dnode_get_enum(dnode, "../../is-type")
+		    == IS_LEVEL_1_AND_2) {
+			flog_warn(EC_LIB_NB_CB_CONFIG_VALIDATE,
+				  "Can't enable PPR on L1/L2 areas");
+			return NB_ERR_VALIDATION;
+		}
+		break;
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+		break;
+	case NB_EV_APPLY:
+		area = nb_running_get_entry(dnode, NULL, true);
+		area->pprdb.config.enabled = yang_dnode_get_bool(dnode, NULL);
+		if (area->pprdb.config.enabled)
+			isis_area_verify_ppr(area);
+		else
+			isis_area_disable_ppr(area);
+
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath: /frr-isisd:isis/instance/ppr/ppr-advertise
+ */
+int isis_instance_ppr_ppr_advertise_create(enum nb_event event,
+					   const struct lyd_node *dnode,
+					   union nb_resource *resource)
+{
+	struct isis_area *area;
+	struct isis_ppr_adv *adv;
+	const char *name;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	area = nb_running_get_entry(dnode, NULL, true);
+	name = yang_dnode_get_string(dnode, "./name");
+
+	adv = isis_ppr_adv_new(area, name);
+	nb_running_set_entry(dnode, adv);
+
+	return NB_OK;
+}
+
+int isis_instance_ppr_ppr_advertise_destroy(enum nb_event event,
+					    const struct lyd_node *dnode)
+{
+	struct isis_ppr_adv *adv;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	adv = nb_running_unset_entry(dnode);
+	isis_ppr_adv_del(adv);
+
+	return NB_OK;
+}
+
+/*
  * XPath: /frr-interface:lib/interface/frr-isisd:isis
  */
 int lib_interface_isis_create(enum nb_event event, const struct lyd_node *dnode,

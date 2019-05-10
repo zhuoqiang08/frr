@@ -183,6 +183,7 @@ struct isis_area *isis_area_create(const char *area_tag)
 #endif /* ifndef FABRICD */
 
 	area_mt_init(area);
+	isis_ppr_area_init(area);
 
 	area->area_tag = strdup(area_tag);
 	listnode_add(isis->area_list, area);
@@ -279,6 +280,7 @@ int isis_area_destroy(const char *area_tag)
 	isis_area_verify_routes(area);
 
 	isis_sr_area_term(area);
+	isis_ppr_area_term(area);
 
 	spftree_area_del(area);
 
@@ -760,6 +762,8 @@ void print_debug(struct vty *vty, int flags, int onoff)
 	if (flags & DEBUG_SR)
 		vty_out(vty, "IS-IS Segment Routing events debugging is %s\n",
 			onoffs);
+	if (flags & DEBUG_PPR)
+		vty_out(vty, "IS-IS PPR events debugging is %s\n", onoffs);
 	if (flags & DEBUG_UPDATE_PACKETS)
 		vty_out(vty, "IS-IS Update related packet debugging is %s\n",
 			onoffs);
@@ -820,6 +824,10 @@ static int config_write_debug(struct vty *vty)
 	}
 	if (flags & DEBUG_SR) {
 		vty_out(vty, "debug " PROTO_NAME " sr-events\n");
+		write++;
+	}
+	if (flags & DEBUG_PPR) {
+		vty_out(vty, "debug " PROTO_NAME " ppr\n");
 		write++;
 	}
 	if (flags & DEBUG_UPDATE_PACKETS) {
@@ -1044,6 +1052,33 @@ DEFUN (no_debug_isis_srevents,
 {
 	isis->debugs &= ~DEBUG_SR;
 	print_debug(vty, DEBUG_SR, 0);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN (debug_isis_ppr,
+       debug_isis_ppr_cmd,
+       "debug " PROTO_NAME " ppr",
+       DEBUG_STR
+       PROTO_HELP
+       "Preferred Path Routing\n")
+{
+	isis->debugs |= DEBUG_PPR;
+	print_debug(vty, DEBUG_PPR, 1);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN (no_debug_isis_ppr,
+       no_debug_isis_ppr_cmd,
+       "no debug " PROTO_NAME " ppr",
+       NO_STR
+       UNDEBUG_STR
+       PROTO_HELP
+       "Preferred Path Routing\n")
+{
+	isis->debugs &= ~DEBUG_PPR;
+	print_debug(vty, DEBUG_PPR, 0);
 
 	return CMD_SUCCESS;
 }
@@ -2224,6 +2259,8 @@ void isis_init(void)
 	install_element(ENABLE_NODE, &no_debug_isis_spfevents_cmd);
 	install_element(ENABLE_NODE, &debug_isis_srevents_cmd);
 	install_element(ENABLE_NODE, &no_debug_isis_srevents_cmd);
+	install_element(ENABLE_NODE, &debug_isis_ppr_cmd);
+	install_element(ENABLE_NODE, &no_debug_isis_ppr_cmd);
 	install_element(ENABLE_NODE, &debug_isis_rtevents_cmd);
 	install_element(ENABLE_NODE, &no_debug_isis_rtevents_cmd);
 	install_element(ENABLE_NODE, &debug_isis_events_cmd);
@@ -2251,6 +2288,8 @@ void isis_init(void)
 	install_element(CONFIG_NODE, &no_debug_isis_spfevents_cmd);
 	install_element(CONFIG_NODE, &debug_isis_srevents_cmd);
 	install_element(CONFIG_NODE, &no_debug_isis_srevents_cmd);
+	install_element(CONFIG_NODE, &debug_isis_ppr_cmd);
+	install_element(CONFIG_NODE, &no_debug_isis_ppr_cmd);
 	install_element(CONFIG_NODE, &debug_isis_rtevents_cmd);
 	install_element(CONFIG_NODE, &no_debug_isis_rtevents_cmd);
 	install_element(CONFIG_NODE, &debug_isis_events_cmd);

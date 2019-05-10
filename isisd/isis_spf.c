@@ -48,6 +48,7 @@
 #include "isis_dynhn.h"
 #include "isis_spf.h"
 #include "isis_route.h"
+#include "isis_ppr.h"
 #include "isis_csm.h"
 #include "isis_mt.h"
 #include "isis_tlvs.h"
@@ -1223,8 +1224,8 @@ static int isis_run_spf_cb(struct thread *thread)
 				      &thread->real);
 
 	isis_area_verify_routes(area);
-
 	isis_area_verify_sr(area);
+	isis_area_verify_ppr(area);
 
 	/* walk all circuits and reset any spf specific flags */
 	struct listnode *node;

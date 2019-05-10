@@ -529,6 +529,21 @@ const struct frr_yang_module_info frr_isisd_info = {
 			},
 		},
 		{
+			.xpath = "/frr-isisd:isis/instance/ppr/enable",
+			.cbs = {
+				.cli_show = cli_show_isis_ppr_enable,
+				.modify = isis_instance_ppr_enable_modify,
+			},
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/ppr/ppr-advertise",
+			.cbs = {
+				.cli_show = cli_show_isis_ppr_advertise,
+				.create = isis_instance_ppr_ppr_advertise_create,
+				.destroy = isis_instance_ppr_ppr_advertise_destroy,
+			},
+		},
+		{
 			.xpath = "/frr-interface:lib/interface/frr-isisd:isis",
 			.cbs = {
 				.create = lib_interface_isis_create,
