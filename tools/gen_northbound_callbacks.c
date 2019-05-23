@@ -193,7 +193,14 @@ static int generate_callbacks(const struct lys_node *snode, void *arg)
 				       cb_name, sizeof(cb_name));
 		printf("static %s%s(%s)\n"
 		       "{\n"
-		       "\t/* TODO: implement me. */\n"
+		       "\tswitch (event) {\n"
+		       "\tcase NB_EV_VALIDATE:\n"
+		       "\tcase NB_EV_PREPARE:\n"
+		       "\tcase NB_EV_ABORT:\n"
+		       "\tcase NB_EV_APPLY:\n"
+		       "\t\t/* TODO: implement me. */\n"
+		       "\t\tbreak;\n"
+		       "\t}\n\n"
 		       "\treturn %s;\n"
 		       "}\n\n",
 		       nb_callbacks[cb->operation].return_type, cb_name,
