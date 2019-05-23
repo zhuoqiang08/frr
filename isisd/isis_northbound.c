@@ -1512,6 +1512,176 @@ static int isis_instance_mpls_te_router_address_destroy(enum nb_event event,
 }
 
 /*
+ * XPath: /frr-isisd:isis/instance/segment-routing/enabled
+ */
+static int
+isis_instance_segment_routing_enabled_modify(enum nb_event event,
+					     const struct lyd_node *dnode,
+					     union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath: /frr-isisd:isis/instance/segment-routing/srgb/lower-bound
+ */
+static int isis_instance_segment_routing_srgb_lower_bound_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath: /frr-isisd:isis/instance/segment-routing/srgb/upper-bound
+ */
+static int isis_instance_segment_routing_srgb_upper_bound_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath: /frr-isisd:isis/instance/segment-routing/msd/node-msd
+ */
+static int
+isis_instance_segment_routing_msd_node_msd_modify(enum nb_event event,
+						  const struct lyd_node *dnode,
+						  union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+static int
+isis_instance_segment_routing_msd_node_msd_destroy(enum nb_event event,
+						   const struct lyd_node *dnode)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath: /frr-isisd:isis/instance/segment-routing/prefix-sid-map/prefix-sid
+ */
+static int isis_instance_segment_routing_prefix_sid_map_prefix_sid_create(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+static int isis_instance_segment_routing_prefix_sid_map_prefix_sid_destroy(
+	enum nb_event event, const struct lyd_node *dnode)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath:
+ * /frr-isisd:isis/instance/segment-routing/prefix-sid-map/prefix-sid/sid-index
+ */
+static int
+isis_instance_segment_routing_prefix_sid_map_prefix_sid_sid_index_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
+ * XPath:
+ * /frr-isisd:isis/instance/segment-routing/prefix-sid-map/prefix-sid/last-hop-behavior
+ */
+static int
+isis_instance_segment_routing_prefix_sid_map_prefix_sid_last_hop_behavior_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource)
+{
+	switch (event) {
+	case NB_EV_VALIDATE:
+	case NB_EV_PREPARE:
+	case NB_EV_ABORT:
+	case NB_EV_APPLY:
+		/* TODO: implement me. */
+		break;
+	}
+
+	return NB_OK;
+}
+
+/*
  * XPath: /frr-interface:lib/interface/frr-isisd:isis
  */
 static int lib_interface_isis_create(enum nb_event event,
@@ -3048,6 +3218,43 @@ const struct frr_yang_module_info frr_isisd_info = {
 			.cbs.modify = isis_instance_mpls_te_router_address_modify,
 			.cbs.destroy = isis_instance_mpls_te_router_address_destroy,
 			.cbs.cli_show = cli_show_isis_mpls_te_router_addr,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/enabled",
+			.cbs.modify = isis_instance_segment_routing_enabled_modify,
+			.cbs.cli_show = cli_show_isis_sr_enabled,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/srgb",
+			.cbs.cli_show = cli_show_isis_srgb,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/srgb/lower-bound",
+			.cbs.modify = isis_instance_segment_routing_srgb_lower_bound_modify,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/srgb/upper-bound",
+			.cbs.modify = isis_instance_segment_routing_srgb_upper_bound_modify,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/msd/node-msd",
+			.cbs.modify = isis_instance_segment_routing_msd_node_msd_modify,
+			.cbs.destroy = isis_instance_segment_routing_msd_node_msd_destroy,
+			.cbs.cli_show = cli_show_isis_node_msd,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/prefix-sid-map/prefix-sid",
+			.cbs.create = isis_instance_segment_routing_prefix_sid_map_prefix_sid_create,
+			.cbs.destroy = isis_instance_segment_routing_prefix_sid_map_prefix_sid_destroy,
+			.cbs.cli_show = cli_show_isis_prefix_sid,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/prefix-sid-map/prefix-sid/sid-index",
+			.cbs.modify = isis_instance_segment_routing_prefix_sid_map_prefix_sid_sid_index_modify,
+		},
+		{
+			.xpath = "/frr-isisd:isis/instance/segment-routing/prefix-sid-map/prefix-sid/last-hop-behavior",
+			.cbs.modify = isis_instance_segment_routing_prefix_sid_map_prefix_sid_last_hop_behavior_modify,
 		},
 		{
 			.xpath = "/frr-interface:lib/interface/frr-isisd:isis",
