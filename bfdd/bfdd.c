@@ -44,6 +44,9 @@ struct thread_master *master;
 /* BFDd privileges */
 static zebra_capabilities_t _caps_p[] = {ZCAP_BIND, ZCAP_SYS_ADMIN, ZCAP_NET_RAW};
 
+/* BFD daemon information. */
+static struct frr_daemon_info bfdd_di;
+
 void socket_close(int *s)
 {
 	if (*s <= 0)
@@ -83,6 +86,14 @@ static void sigterm_handler(void)
 	exit(0);
 }
 
+static void sighup_handler(void)
+{
+	zlog_info("SIGHUP received");
+
+	/* Reload config file. */
+	vty_read_config(NULL, bfdd_di.config_file, config_default);
+}
+
 static struct quagga_signal_t bfd_signals[] = {
 	{
 		.signal = SIGUSR1,
@@ -95,6 +106,10 @@ static struct quagga_signal_t bfd_signals[] = {
 	{
 		.signal = SIGINT,
 		.handler = &sigterm_handler,
+	},
+	{
+		.signal = SIGHUP,
+		.handler = &sighup_handler,
 	},
 };
 
