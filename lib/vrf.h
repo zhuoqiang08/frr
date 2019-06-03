@@ -27,6 +27,7 @@
 #include "qobj.h"
 #include "vty.h"
 #include "ns.h"
+#include "if.h"
 
 #ifdef __cplusplus
 extern "C" {

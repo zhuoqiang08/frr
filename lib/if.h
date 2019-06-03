@@ -34,6 +34,13 @@ extern "C" {
 DECLARE_MTYPE(IF)
 DECLARE_MTYPE(CONNECTED_LABEL)
 
+/* VRF ID type.
+ *
+ * This is here because vrf.h and if.h are interwoven too tightly to put it
+ * in vrf.h.
+ */
+typedef uint32_t vrf_id_t;
+
 /* Interface link-layer type, if known. Derived from:
  *
  * net/if_arp.h on various platforms - Linux especially.
