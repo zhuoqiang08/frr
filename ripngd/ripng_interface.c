@@ -169,25 +169,29 @@ static int ripng_if_down(struct interface *ifp)
 	ri = ifp->info;
 	ripng = ri->ripng;
 
-	if (ripng)
-		for (rp = agg_route_top(ripng->table); rp;
-		     rp = agg_route_next(rp))
-			if ((list = rp->info) != NULL)
-				for (ALL_LIST_ELEMENTS(list, listnode, nextnode,
-						       rinfo))
-					if (rinfo->ifindex == ifp->ifindex)
-						ripng_ecmp_delete(ripng, rinfo);
-
-
 	if (ri->running) {
 		if (IS_RIPNG_DEBUG_EVENT)
 			zlog_debug("turn off %s", ifp->name);
 
-		/* Leave from multicast group. */
-		ripng_multicast_leave(ifp, ripng->sock);
-
 		ri->running = 0;
 	}
+
+	if (ripng == NULL)
+		return 0;
+
+	for (rp = agg_route_top(ripng->table); rp; rp = agg_route_next(rp)) {
+		if ((list = rp->info) == NULL)
+			continue;
+
+		for (ALL_LIST_ELEMENTS(list, listnode, nextnode, rinfo))
+			if (rinfo->ifindex == ifp->ifindex)
+				ripng_ecmp_delete(ripng, rinfo);
+	}
+
+
+	/* Leave from multicast group. */
+	if (ri->running)
+		ripng_multicast_leave(ifp, ripng->sock);
 
 	return 0;
 }
