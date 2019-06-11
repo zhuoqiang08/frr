@@ -353,7 +353,9 @@ void vty_hello(struct vty *vty)
 static void vty_prompt(struct vty *vty)
 {
 	if (vty->type == VTY_TERM) {
+		vty_out(vty, "\033[94;1m");
 		vty_out(vty, cmd_prompt(vty->node), cmd_hostname_get());
+		vty_out(vty, "\033[97m");
 	}
 }
 
@@ -709,6 +711,19 @@ static void vty_redraw_line(struct vty *vty)
 {
 	vty_write(vty, vty->buf, vty->length);
 	vty->cp = vty->length;
+}
+
+static void vty_erase_prompt(struct vty *vty)
+{
+	const char *prompt = cmd_prompt(vty->node);
+	const char *hostname = cmd_hostname_get();
+	size_t len = vty->length + strlen(prompt) - 2 + strlen(hostname);
+	int uplines = 0;
+
+	if (vty->width)
+		uplines = (len - 1) / vty->width;
+
+	vty_out(vty, "\033[1G\033[%dA\033[J", uplines);
 }
 
 /* Forward word. */
@@ -1266,6 +1281,7 @@ static int vty_execute(struct vty *vty)
 
 	ret = CMD_SUCCESS;
 
+	vty->incmd = 1;
 	switch (vty->node) {
 	case AUTH_NODE:
 	case AUTH_ENABLE_NODE:
@@ -1281,6 +1297,8 @@ static int vty_execute(struct vty *vty)
 	/* Clear command line buffer. */
 	vty->cp = vty->length = 0;
 	vty_clear_buf(vty);
+
+	vty->incmd = 0;
 
 	if (vty->status != VTY_CLOSE)
 		vty_prompt(vty);
@@ -1483,7 +1501,7 @@ static int vty_read(struct thread *thread)
 			break;
 		case '\n':
 		case '\r':
-			vty_out(vty, "\n");
+			vty_out(vty, "\033[m\n");
 			vty_execute(vty);
 			break;
 		case '\t':
@@ -1689,6 +1707,7 @@ static void vty_stdio_reset(int isexit)
 		if (stdio_termios)
 			tcsetattr(0, TCSANOW, &stdio_orig_termios);
 		stdio_termios = false;
+		write(1, "\033[m", 3);
 
 		stdio_vty = NULL;
 
@@ -1736,6 +1755,12 @@ void vty_stdio_resume(void)
 		stdio_termios = true;
 	}
 
+	struct winsize wsz;
+	if (!ioctl(0, TIOCGWINSZ, &wsz)) {
+		stdio_vty->width = wsz.ws_col;
+		stdio_vty->height = wsz.ws_row;
+	}
+
 	vty_prompt(stdio_vty);
 
 	/* Add read/write thread. */
@@ -1748,6 +1773,28 @@ void vty_stdio_close(void)
 	if (!stdio_vty)
 		return;
 	vty_close(stdio_vty);
+}
+
+bool vty_stdio_log(struct iovec *iov, size_t iov_len)
+{
+	if (!stdio_vty)
+		return false;
+	if (!stdio_termios)
+		return true;
+	if (!stdio_vty->incmd)
+		vty_erase_prompt(stdio_vty);
+	vty_out(stdio_vty, "\033[m\033[38;5;244m");
+	while (iov_len--) {
+		vty_write(stdio_vty, iov->iov_base, iov->iov_len);
+		iov++;
+	}
+	vty_write(stdio_vty, "\033[m\r", 4);
+	if (!stdio_vty->incmd) {
+		vty_prompt(stdio_vty);
+		vty_redraw_line(stdio_vty);
+	}
+	vty_event(VTY_WRITE, stdio_vty->wfd, stdio_vty);
+	return true;
 }
 
 struct vty *vty_stdio(void (*atclose)(int isexit))

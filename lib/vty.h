@@ -101,6 +101,8 @@ struct vty {
 	/* Command max length. */
 	int max;
 
+	int incmd;
+
 	/* Histry of command */
 	char *hist[VTY_MAXHIST];
 
