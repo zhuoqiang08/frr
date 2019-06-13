@@ -30,8 +30,8 @@
 extern "C" {
 #endif
 
-/* Maximum next hop string length - gateway + ifindex */
-#define NEXTHOP_STRLEN (INET6_ADDRSTRLEN + 30)
+/* Maximum next hop string length - gateway + space + ifname */
+#define NEXTHOP_STRLEN (INET6_ADDRSTRLEN + 1 + IFNAMSIZ)
 
 union g_addr {
 	struct in_addr ipv4;

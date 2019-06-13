@@ -310,19 +310,31 @@ void nexthop_del_labels(struct nexthop *nexthop)
 
 const char *nexthop2str(const struct nexthop *nexthop, char *str, int size)
 {
+	struct interface *ifp;
+	char nh_interface[IFNAMSIZ] = "";
+
+	if (nexthop->ifindex) {
+		ifp = if_lookup_by_index(nexthop->ifindex, nexthop->vrf_id);
+		if (ifp)
+			strlcpy(nh_interface, ifp->name, sizeof(nh_interface));
+		else
+			snprintf(nh_interface, sizeof(nh_interface),
+				 "(ifindex %u)", nexthop->ifindex);
+	}
+
 	switch (nexthop->type) {
 	case NEXTHOP_TYPE_IFINDEX:
-		snprintf(str, size, "if %u", nexthop->ifindex);
+		snprintf(str, size, "%s", nh_interface);
 		break;
 	case NEXTHOP_TYPE_IPV4:
 	case NEXTHOP_TYPE_IPV4_IFINDEX:
-		snprintf(str, size, "%s if %u", inet_ntoa(nexthop->gate.ipv4),
-			 nexthop->ifindex);
+		snprintf(str, size, "%s, %s", inet_ntoa(nexthop->gate.ipv4),
+			 nh_interface);
 		break;
 	case NEXTHOP_TYPE_IPV6:
 	case NEXTHOP_TYPE_IPV6_IFINDEX:
-		snprintf(str, size, "%s if %u", inet6_ntoa(nexthop->gate.ipv6),
-			 nexthop->ifindex);
+		snprintf(str, size, "%s, %s", inet6_ntoa(nexthop->gate.ipv6),
+			 nh_interface);
 		break;
 	case NEXTHOP_TYPE_BLACKHOLE:
 		snprintf(str, size, "blackhole");

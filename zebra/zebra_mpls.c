@@ -34,6 +34,7 @@
 #include "routemap.h"
 #include "stream.h"
 #include "nexthop.h"
+#include "termtable.h"
 #include "lib/json.h"
 
 #include "zebra/rib.h"
@@ -2542,8 +2543,8 @@ static bool mpls_ftn_update_nexthop(int add, struct nexthop *nexthop,
  */
 int mpls_ftn_update(int add, struct zebra_vrf *zvrf, enum lsp_types_t type,
 		    struct prefix *prefix, enum nexthop_types_t gtype,
-		    union g_addr *gate, ifindex_t ifindex, uint8_t distance,
-		    mpls_label_t out_label)
+		    union g_addr *gate, ifindex_t ifindex, uint8_t route_type,
+		    unsigned short route_instance, mpls_label_t out_label)
 {
 	struct route_table *table;
 	struct route_node *rn;
@@ -2562,7 +2563,7 @@ int mpls_ftn_update(int add, struct zebra_vrf *zvrf, enum lsp_types_t type,
 	RNODE_FOREACH_RE (rn, re) {
 		if (CHECK_FLAG(re->status, ROUTE_ENTRY_REMOVED))
 			continue;
-		if (re->distance == distance)
+		if (re->type == route_type && re->instance == route_instance)
 			break;
 	}
 
@@ -3063,63 +3064,48 @@ void zebra_mpls_print_lsp_table(struct vty *vty, struct zebra_vrf *zvrf,
 					     json, JSON_C_TO_STRING_PRETTY));
 		json_object_free(json);
 	} else {
-		vty_out(vty, " Inbound                            Outbound\n");
-		vty_out(vty, "   Label     Type          Nexthop     Label\n");
-		vty_out(vty, "--------  -------  ---------------  --------\n");
+		struct ttable *tt;
+
+		/* Prepare table. */
+		tt = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
+		ttable_add_row(tt, "Inbound Label|Type|Nexthop|Outbound Label");
+		tt->style.cell.rpad = 2;
+		tt->style.corner = '+';
+		ttable_restyle(tt);
+		ttable_rowseps(tt, 0, BOTTOM, true, '-');
 
 		for (ALL_LIST_ELEMENTS_RO(lsp_list, node, lsp)) {
 			for (nhlfe = lsp->nhlfe_list; nhlfe;
 			     nhlfe = nhlfe->next) {
-				vty_out(vty, "%8d  %7s  ", lsp->ile.in_label,
-					nhlfe_type2str(nhlfe->type));
+				const char *nexthop_str = NULL, *out_label_str;
+				char nh_buf[NEXTHOP_STRLEN];
 				nexthop = nhlfe->nexthop;
 
-				switch (nexthop->type) {
-				case NEXTHOP_TYPE_IFINDEX: {
-					struct zebra_ns *zns;
-					struct interface *ifp;
-
-					zns = zebra_ns_lookup(NS_DEFAULT);
-					ifp = if_lookup_by_index_per_ns(
-							zns,
-							nexthop->ifindex);
-					if (ifp)
-						vty_out(vty, "%15s", ifp->name);
-					else
-						vty_out(vty, "%15s", "Null");
-
-					break;
-				}
-				case NEXTHOP_TYPE_IPV4:
-				case NEXTHOP_TYPE_IPV4_IFINDEX:
-					vty_out(vty, "%15s",
-						inet_ntoa(nexthop->gate.ipv4));
-					break;
-				case NEXTHOP_TYPE_IPV6:
-				case NEXTHOP_TYPE_IPV6_IFINDEX:
-					vty_out(vty, "%15s",
-						inet_ntop(AF_INET6,
-							  &nexthop->gate.ipv6,
-							  buf, BUFSIZ));
-					break;
-				default:
-					break;
-				}
+				nexthop_str = nexthop2str(nexthop, nh_buf,
+							  sizeof(nh_buf));
 
 				if (nexthop->type != NEXTHOP_TYPE_IFINDEX)
-					vty_out(vty, "  %8s\n",
-						mpls_label2str(
-							nexthop->nh_label
-								->num_labels,
-							&nexthop->nh_label
-								 ->label[0],
-							buf, BUFSIZ, 1));
+					out_label_str = mpls_label2str(
+						nexthop->nh_label->num_labels,
+						&nexthop->nh_label->label[0],
+						buf, BUFSIZ, 1);
 				else
-					vty_out(vty, "\n");
+					out_label_str = "-";
+
+				ttable_add_row(tt, "%u|%s|%s|%s",
+					       lsp->ile.in_label,
+					       nhlfe_type2str(nhlfe->type),
+					       nexthop_str, out_label_str);
 			}
 		}
 
-		vty_out(vty, "\n");
+		/* Dump the generated table. */
+		if (tt->nrows > 1) {
+			char *table = ttable_dump(tt, "\n");
+			vty_out(vty, "%s\n", table);
+			XFREE(MTYPE_TMP, table);
+		}
+		ttable_del(tt);
 	}
 
 	list_delete(&lsp_list);
