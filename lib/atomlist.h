@@ -141,11 +141,11 @@ macro_inline type *prefix ## _pop(struct prefix##_head *h)                     \
 {	char *p = (char *)atomlist_pop(&h->ah);                                \
 	return p ? (type *)(p - offsetof(type, field)) : NULL; }               \
 macro_inline type *prefix ## _first(struct prefix##_head *h)                   \
-{	char *p = atomptr_p(atomic_load_explicit(&h->ah.first,                 \
+{	char *p = (char *)atomptr_p(atomic_load_explicit(&h->ah.first,         \
 				memory_order_acquire));                        \
 	return p ? (type *)(p - offsetof(type, field)) : NULL; }               \
 macro_inline type *prefix ## _next(struct prefix##_head *h, type *item)        \
-{	char *p = atomptr_p(atomic_load_explicit(&item->field.ai.next,         \
+{	char *p = (char *)atomptr_p(atomic_load_explicit(&item->field.ai.next, \
 				memory_order_acquire));                        \
 	return p ? (type *)(p - offsetof(type, field)) : NULL; }               \
 macro_inline type *prefix ## _next_safe(struct prefix##_head *h, type *item)   \
