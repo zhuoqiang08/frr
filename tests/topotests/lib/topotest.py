@@ -754,6 +754,11 @@ class Router(Node):
                 for d in StringIO.StringIO(rundaemons):
                     daemonpid = self.cmd('cat %s' % d.rstrip()).rstrip()
                     if (daemonpid.isdigit() and pid_exists(int(daemonpid))):
+                        logger.info('{}: {} seems to hang, gdb: {}'.format(
+                            self.name,
+                            os.path.basename(d.rstrip().rsplit(".", 1)[0]),
+                            self.cmd('gdb -batch -ex "thread apply all bt" -p {}'.format(daemonpid))
+                        ))
                         logger.info('{}: killing {}'.format(
                             self.name,
                             os.path.basename(d.rstrip().rsplit(".", 1)[0])
@@ -929,7 +934,7 @@ class Router(Node):
                 if (len(corefiles) > 0):
                     daemon_path = os.path.join(self.daemondir, daemon)
                     backtrace = subprocess.check_output([
-                        "gdb {} {} --batch -ex bt 2> /dev/null".format(daemon_path, corefiles[0])
+                        "gdb {} {} --batch -ex 'thread apply all bt' 2> /dev/null".format(daemon_path, corefiles[0])
                     ], shell=True)
                     sys.stderr.write("\n%s: %s crashed. Core file found - Backtrace follows:\n" % (self.name, daemon))
                     sys.stderr.write("%s" % backtrace)
@@ -977,7 +982,7 @@ class Router(Node):
                 if (len(corefiles) > 0):
                     daemon_path = os.path.join(self.daemondir, daemon)
                     backtrace = subprocess.check_output([
-                        "gdb {} {} --batch -ex bt 2> /dev/null".format(daemon_path, corefiles[0])
+                        "gdb {} {} --batch -ex 'thread apply all bt' 2> /dev/null".format(daemon_path, corefiles[0])
                     ], shell=True)
                     sys.stderr.write("\n%s: %s crashed. Core file found - Backtrace follows:\n" % (self.name, daemon))
                     sys.stderr.write("%s\n" % backtrace)
