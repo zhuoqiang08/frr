@@ -480,7 +480,7 @@ def test_ospfv2_interfaces():
             actual = net['r%s' % i].cmd('vtysh -c "show ip ospf interface" 2> /dev/null').rstrip()
             # Mask out Bandwidth portion. They may change..
             actual = re.sub(r"BW [0-9]+ Mbit", "BW XX Mbit", actual)
-	    actual = re.sub(r"ifindex [0-9]", "ifindex X", actual)
+	    actual = re.sub(r"ifindex [0-9]+", "ifindex X", actual)
 
             # Drop time in next due 
             actual = re.sub(r"Hello due in [0-9\.]+s", "Hello due in XX.XXXs", actual)
