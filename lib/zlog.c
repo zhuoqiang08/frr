@@ -165,7 +165,7 @@ void vzlog(int prio, const char *fmt, va_list ap)
 	clock_gettime(CLOCK_REALTIME, &msg.ts);
 	msg.ts_flags = 0;
 
-	rcu_hold();
+	rcu_read_lock();
 	frr_each(zlog_targets, &zlog_targets, zt) {
 		if (prio > zt->prio_min)
 			continue;
@@ -181,7 +181,7 @@ void vzlog(int prio, const char *fmt, va_list ap)
 			break;
 		}
 	}
-	rcu_release();
+	rcu_read_unlock();
 }
 
 static const char *prionames[] = {
