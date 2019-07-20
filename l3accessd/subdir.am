@@ -1,0 +1,19 @@
+#
+# l3accessd
+#
+
+sbin_PROGRAMS += l3accessd/l3accessd
+# vtysh_scan += $(top_srcdir)/l3accessd/l3a_vty.c
+
+l3accessd_l3accessd_LDADD = lib/libfrr.la $(LIBCAP)
+l3accessd_l3accessd_SOURCES = \
+	l3accessd/l3a_dhcpv6.c \
+	l3accessd/l3a_main.c \
+	l3accessd/l3a_route.c \
+	l3accessd/l3a_vty.c \
+	l3accessd/l3a_zebra.c \
+	# end
+
+l3accessd/l3a_vty_clippy.c: $(CLIPPY_DEPS)
+l3accessd/l3a_vty.$(OBJEXT): l3accessd/l3a_vty_clippy.c
+
