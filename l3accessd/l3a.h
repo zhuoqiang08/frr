@@ -33,6 +33,7 @@ struct l3a_if {
 
 	struct l3a_route_iflist_head routes;
 
+	bool snoop;
 	int snoop_fd;
 	struct thread *snoop_thread;
 };

@@ -36,7 +36,9 @@ DEFPY(l3a_dhcpv6_main,
       "DHCPv6 snooping\n"
       "Interface\n")
 {
-	l3a_dhcpv6_snoop(l3a_if_get_byname(ifname));
+	struct l3a_if *l3a_if = l3a_if_get_byname(ifname);
+	l3a_if->snoop = true;
+	l3a_dhcpv6_snoop(l3a_if);
 	return CMD_SUCCESS;
 }
 

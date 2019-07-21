@@ -41,6 +41,7 @@ static int interface_add(ZAPI_CALLBACK_ARGS)
 {
 	struct interface *ifp;
 	struct l3a_if *l3a_if;
+	struct l3a_route *l3ar;
 
 	ifp = zebra_interface_add_read(zclient->ibuf, vrf_id);
 	if (!ifp->info) {
@@ -52,6 +53,15 @@ static int interface_add(ZAPI_CALLBACK_ARGS)
 	} else
 		l3a_if = ifp->info;
 
+	zlog_debug("interface %s added (%zu routes)", ifp->name,
+		   l3a_route_iflist_count(&l3a_if->routes));
+
+	if (ifp->flags & IFF_UP) {
+		if (l3a_if->snoop)
+			l3a_dhcpv6_snoop(l3a_if);
+		frr_each (l3a_route_iflist, &l3a_if->routes, l3ar)
+			l3a_zebra_update(l3ar);
+	}
 	return 0;
 }
 
@@ -98,8 +108,13 @@ static int interface_state_up(ZAPI_CALLBACK_ARGS)
 	assert(ifp && ifp->info);
 	l3a_if = ifp->info;
 
-	frr_each (l3a_route_iflist, &l3a_if->routes, l3ar) {
-	}
+	zlog_debug("interface %s came up (%zu routes)", ifp->name,
+		   l3a_route_iflist_count(&l3a_if->routes));
+
+	if (l3a_if->snoop)
+		l3a_dhcpv6_snoop(l3a_if);
+	frr_each (l3a_route_iflist, &l3a_if->routes, l3ar)
+		l3a_zebra_update(l3ar);
 	return 0;
 }
 

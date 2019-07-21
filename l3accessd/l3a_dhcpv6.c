@@ -207,6 +207,8 @@ struct db_binding {
 	struct db_prefix prefixes[0];
 };
 
+static void dhcpv6_binding_check_empty(struct dhcpv6_pd_binding *binding);
+
 static void dhcpv6_db_update(struct dhcpv6_pd_binding *binding)
 {
 	struct db_binding *buf;
@@ -258,6 +260,7 @@ static void dhcpv6_db_update(struct dhcpv6_pd_binding *binding)
 
 void l3a_dhcpv6_db(const char *filename)
 {
+	struct timeval tv, mono;
 	datum key, val;
 	char *prev;
 
@@ -269,20 +272,98 @@ void l3a_dhcpv6_db(const char *filename)
 		return;
 	}
 
+	gettimeofday(&tv, NULL);
+	monotime(&mono);
+
 	key = gdbm_firstkey(db);
 	while (key.dptr) {
-		struct db_binding *binding;
-		size_t n_prefixes;
+		struct db_binding *dbbind;
+		struct dhcpv6_pd_binding *binding, dummy;
+		union g_addr gw;
+		size_t n_prefixes, i;
 
 		val = gdbm_fetch(db, key);
 		if (!val.dptr)
 			goto fail;
 
-		binding = (struct db_binding *)val.dptr;
+		dbbind = (struct db_binding *)val.dptr;
 		n_prefixes = (val.dsize - sizeof(struct db_binding))
 			/ sizeof(struct db_prefix);
 
-		zlog_info("db item %zu prefixes", n_prefixes);
+		zlog_info("db: IA %.*pHXc.%u with %zu prefixes",
+			  (int)dbbind->cid_len, dbbind->cid, dbbind->iaid,
+			  n_prefixes);
+
+		dummy.cid = dbbind->cid;
+		dummy.cid_len = dbbind->cid_len;
+		dummy.iaid = dbbind->iaid;
+		binding = dhcpv6_pd_binding_hash_find(&pd_bindings, &dummy);
+		if (!binding) {
+			binding = XCALLOC(MTYPE_L3A_DHCPV6_BINDING,
+					  sizeof(*binding) + dbbind->cid_len);
+			binding->cid = (void *)(binding + 1);
+			memcpy(binding->cid, dbbind->cid, dbbind->cid_len);
+			binding->cid_len = dbbind->cid_len;
+			binding->iaid = dbbind->iaid;
+			dhcpv6_pd_binding_hash_add(&pd_bindings, binding);
+			dhcpv6_pd_prefixes_init(&binding->prefixes);
+		}
+
+		binding->l3a_if = l3a_if_get_byname(dbbind->ifname);
+		binding->lladdr = dbbind->lladdr;
+		gw.ipv6 = dbbind->lladdr;
+
+		for (i = 0; i < n_prefixes; i++) {
+			struct db_prefix *dbp = &dbbind->prefixes[i];
+			struct dhcpv6_pd_prefix *prefix, pdummy;
+			struct prefix_ipv6 p6;
+			int64_t remain;
+			uint32_t valid, preferred;
+
+			p6.family = AF_INET6;
+			p6.prefixlen = dbp->prefixlen;
+			memcpy(&p6.prefix, &dbp->addr, 16);
+			apply_mask_ipv6(&p6);
+			
+			remain = dbp->valid - tv.tv_sec;
+			if (remain < 0) {
+				zlog_info("db: %pFX has expired", &p6);
+				continue;
+			}
+
+			valid = mono.tv_sec + remain;
+			preferred = mono.tv_sec + (dbp->preferred - tv.tv_sec);
+
+			pdummy.pd = p6;
+			prefix = dhcpv6_pd_prefixes_find(&binding->prefixes,
+							 &pdummy);
+			if (prefix) {
+				if (prefix->valid.tv_sec >= remain) {
+					zlog_info("db: %pFX already known",
+						  &p6);
+					continue;
+				}
+				dhcpv6_pd_expiry_del(&pd_expiry, prefix);
+			} else {
+				prefix = XCALLOC(MTYPE_L3A_DHCPV6_PD_PREFIX,
+						 sizeof(*prefix));
+				prefix->pd = p6;
+				dhcpv6_pd_prefixes_add(&binding->prefixes, prefix);
+			}
+			prefix->valid.tv_sec = valid;
+			prefix->preferred.tv_sec = preferred;
+			prefix->binding = binding;
+
+			dhcpv6_pd_expiry_add(&pd_expiry, prefix);
+
+			zlog_debug("db: %pFX valid %Lu", &p6, remain);
+
+			l3a_route_update(&p6, valid * 1000, &gw,
+					 binding->l3a_if->ifp->name, NULL, 0);
+
+		}
+
+		dhcpv6_binding_check_empty(binding);
 
 		free(val.dptr);
 
@@ -291,6 +372,17 @@ fail:
 		key = gdbm_nextkey(db, key);
 		free(prev);
 	}
+}
+
+static void dhcpv6_binding_check_empty(struct dhcpv6_pd_binding *binding)
+{
+	if (dhcpv6_pd_prefixes_first(&binding->prefixes))
+		return;
+	zlog_debug("binding is empty, releasing");
+	dhcpv6_db_update(binding);
+	dhcpv6_pd_prefixes_fini(&binding->prefixes);
+	dhcpv6_pd_binding_hash_del(&pd_bindings, binding);
+	XFREE(MTYPE_L3A_DHCPV6_BINDING, binding);
 }
 
 static void dhcpv6_resched(void);
@@ -315,13 +407,7 @@ static int dhcpv6_expire(struct thread *t)
 		dhcpv6_pd_prefixes_del(&binding->prefixes, prefix);
 		XFREE(MTYPE_L3A_DHCPV6_PD_PREFIX, prefix);
 
-		if (!dhcpv6_pd_prefixes_first(&binding->prefixes)) {
-			zlog_debug("binding is empty, releasing");
-			dhcpv6_db_update(binding);
-			dhcpv6_pd_prefixes_fini(&binding->prefixes);
-			dhcpv6_pd_binding_hash_del(&pd_bindings, binding);
-			XFREE(MTYPE_L3A_DHCPV6_BINDING, binding);
-		}
+		dhcpv6_binding_check_empty(binding);
 	}
 	dhcpv6_resched();
 	return 0;
@@ -519,13 +605,7 @@ static void dhcpv6_process(struct l3a_if *l3a_if, struct ip6_hdr *ip6h,
 
 		dhcpv6_reply_iapd(binding, release, subopts, nsubopts);
 
-		if (!dhcpv6_pd_prefixes_first(&binding->prefixes)) {
-			zlog_debug("binding is empty, releasing");
-			dhcpv6_db_update(binding);
-			dhcpv6_pd_prefixes_fini(&binding->prefixes);
-			dhcpv6_pd_binding_hash_del(&pd_bindings, binding);
-			XFREE(MTYPE_L3A_DHCPV6_BINDING, binding);
-		}
+		dhcpv6_binding_check_empty(binding);
 	}
 
 	dhcpv6_resched();
