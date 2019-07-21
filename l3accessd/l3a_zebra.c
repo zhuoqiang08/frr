@@ -242,7 +242,7 @@ void l3a_zebra_update(struct l3a_route *l3ar)
 		return;
 	}
 
-	zlog_info("zebra add: %pFX", &l3ar->p);
+	zlog_info("route update: %pFX via %pI6 ifi %u", &l3ar->p, &l3ar->nh.gate, l3ar->nh.ifindex);
 
 	struct zapi_route api;
 
