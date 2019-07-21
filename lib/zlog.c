@@ -29,6 +29,7 @@
 #include "atomlist.h"
 #include "frrcu.h"
 #include "zlog.h"
+#include "printfrr.h"
 
 DEFINE_MTYPE_STATIC(LIB, LOG_TARGET,   "log target")
 DEFINE_MTYPE_STATIC(LIB, LOG_FILENAME, "log filename")
@@ -153,12 +154,12 @@ void vzlog(int prio, const char *fmt, va_list ap)
 		if (msg.zlf_pfx->logprefix)
 			break;
 
-	sz = vsnprintf(msg.text, sizeof(fixbuf), fmt, ap);
+	sz = vsnprintfrr(msg.text, sizeof(fixbuf), fmt, ap);
 	if (sz < 0)
 		return; /* error */
 	if ((size_t)sz >= sizeof(fixbuf)) {
 		msg.text = alloca(sz + 1);
-		vsnprintf(msg.text, sz + 1, fmt, ap);
+		vsnprintfrr(msg.text, sz + 1, fmt, ap);
 	}
 	msg.textlen = sz;
 
@@ -258,7 +259,7 @@ void zlog_prefixf(struct zlogmeta_frame *frame, char *buf, size_t bufsz,
 
 	va_start(ap, fmt);
 	frame->logprefix = buf;
-	frame->logprefixsz = offs + vsnprintf(buf + offs, bufsz - offs, fmt, ap);
+	frame->logprefixsz = offs + vsnprintfrr(buf + offs, bufsz - offs, fmt, ap);
 	va_end(ap);
 }
 
@@ -281,7 +282,7 @@ void zlog_metaf(struct zlogmeta_frame *frame, struct zlogmeta_key *key,
 {
 	va_list ap;
 	va_start(ap, fmt);
-	vsnprintf(buf, bufsz, fmt, ap);
+	vsnprintfrr(buf, bufsz, fmt, ap);
 	va_end(ap);
 
 	zlog_meta(frame, key, buf);
