@@ -271,6 +271,10 @@ struct format_kind_info
 #define T_LL	&long_long_integer_type_node
 #define T9L_LL	{ STD_C9L, NULL, T_LL }
 #define TEX_LL	{ STD_EXT, NULL, T_LL }
+#define T_U64	&local_uint64_t_node
+#define TEX_U64	{ STD_EXT, "uint64_t", T_U64 }
+#define T_S64	&local_int64_t_node
+#define TEX_S64	{ STD_EXT, "int64_t", T_S64 }
 #define T_S	&short_integer_type_node
 #define T89_S	{ STD_C89, NULL, T_S }
 #define T_UI	&unsigned_type_node
@@ -307,10 +311,10 @@ struct format_kind_info
 #define T_WI	&wint_type_node
 #define T94_WI	{ STD_C94, "wint_t", T_WI }
 #define TEX_WI	{ STD_EXT, "wint_t", T_WI }
-#define T_ST    &size_type_node
+#define T_ST    &local_size_t_node
 #define T99_ST	{ STD_C99, "size_t", T_ST }
-#define T_SST   &signed_size_type_node
-#define T99_SST	{ STD_C99, "signed size_t", T_SST }
+#define T_SST   &local_ssize_t_node
+#define T99_SST	{ STD_C99, "ssize_t", T_SST }
 #define T_PD    &ptrdiff_type_node
 #define T99_PD	{ STD_C99, "ptrdiff_t", T_PD }
 #define T_UPD   &unsigned_ptrdiff_type_node
