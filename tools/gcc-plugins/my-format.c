@@ -130,8 +130,8 @@ format_warning_at_char (location_t fmt_string_loc, tree format_string_cst,
   substring_loc fmt_loc (fmt_string_loc, string_type, char_idx, char_idx,
 			 char_idx);
 #if BUILDING_GCC_VERSION >= 9000
-  bool warned = format_warning_va (fmt_loc, NULL, UNKNOWN_LOCATION, NULL,
-				   NULL, opt, gmsgid, &ap);
+  format_string_diagnostic_t diag(fmt_loc, NULL, UNKNOWN_LOCATION, NULL, NULL);
+  bool warned = diag.emit_warning_va(opt, gmsgid, &ap);
 #else
   bool warned = format_warning_va (fmt_loc, UNKNOWN_LOCATION, NULL,
 				   opt, gmsgid, &ap);
@@ -2667,10 +2667,17 @@ check_format_types (const substring_loc &fmt_loc,
       if (types->pointer_count == 0)
 	wanted_type = lang_hooks.types.type_promotes_to (wanted_type);
 
-      if (TREE_CODE (wanted_type) != TYPE_DECL)
-        wanted_type = TYPE_MAIN_VARIANT (wanted_type);
-      else
-	wanted_type = TYPE_MAIN_VARIANT (DECL_ORIGINAL_TYPE (wanted_type));
+      switch (TREE_CODE (wanted_type))
+        {
+	  case IDENTIFIER_NODE:
+	    break;
+	  case TYPE_DECL:
+	    wanted_type = TYPE_MAIN_VARIANT (DECL_ORIGINAL_TYPE (wanted_type));
+	    break;
+	  default:
+	    wanted_type = TYPE_MAIN_VARIANT (wanted_type);
+	    break;
+        }
 
       cur_param = types->param;
       if (!cur_param)
@@ -2794,8 +2801,6 @@ compat_inner:
 	    {
 	      if (types->wanted_type == cur_type)
 		continue;
-	      if (TREE_CODE (types->param) == NOP_EXPR)
-		continue;
 	      format_type_warning (fmt_loc, param_loc, types,
 				   wanted_type, orig_cur_type, fki,
 				   offset_to_type_start, conversion_char,
@@ -2805,8 +2810,6 @@ compat_inner:
 	  else if (TREE_CODE (types->wanted_type) == TYPE_DECL)
 	    {
 	      if (types->wanted_type == cur_type->type_common.name)
-		continue;
-	      if (TREE_CODE (types->param) == NOP_EXPR)
 		continue;
 	      format_type_warning (fmt_loc, param_loc, types,
 				   wanted_type, orig_cur_type, fki,
@@ -2853,8 +2856,6 @@ compat_inner:
 		{
 		  if (types->wanted_type == cur_type_cousin)
 		    continue;
-		  if (TREE_CODE (types->param) == NOP_EXPR)
-		    continue;
 		  format_type_warning (fmt_loc, param_loc, types,
 				       wanted_type, orig_cur_type, fki,
 				       offset_to_type_start, conversion_char,
@@ -2864,8 +2865,6 @@ compat_inner:
 	      else if (TREE_CODE (types->wanted_type) == TYPE_DECL)
 		{
 		  if (types->wanted_type == cur_type_cousin->type_common.name)
-		    continue;
-		  if (TREE_CODE (types->param) == NOP_EXPR)
 		    continue;
 		  format_type_warning (fmt_loc, param_loc, types,
 				       wanted_type, orig_cur_type, fki,
@@ -3259,7 +3258,28 @@ class indirection_suffix
   int m_pointer_count;
 };
 
-#if BULDING_FOR_GCC >= 9000
+#if BUILDING_GCC_VERSION >= 9000
+class my_range_label : public range_label
+{
+ public:
+  my_range_label (tree labelled_type, tree other_type)
+  : m_labelled_type (labelled_type), m_other_type (other_type)
+  {
+  }
+
+  label_text get_text (unsigned range_idx) const OVERRIDE;
+
+ protected:
+  tree m_labelled_type;
+  tree m_other_type;
+};
+
+label_text my_range_label::get_text (unsigned range_idx) const
+{
+  return label_text("bla", false);
+}
+
+#define range_label_for_type_mismatch my_range_label
 /* Subclass of range_label for labelling the range in the format string
    with the type in question, adding trailing '*' for pointer_count.  */
 
@@ -3274,9 +3294,9 @@ class range_label_for_format_type_mismatch
   {
   }
 
-  label_text get_text () const FINAL OVERRIDE
+  label_text get_text (unsigned int n) const FINAL OVERRIDE
   {
-    label_text text = range_label_for_type_mismatch::get_text ();
+    label_text text = range_label_for_type_mismatch::get_text (n);
     if (text.m_buffer == NULL)
       return text;
 
@@ -3368,20 +3388,31 @@ format_type_warning (const substring_loc &whole_fmt_loc,
   substring_loc fmt_loc (whole_fmt_loc);
   fmt_loc.set_caret_index (type->offset_loc - 1);
 
-#if BUILDING_FOR_GCC >= 9000
+#if BUILDING_GCC_VERSION >= 9000
   range_label_for_format_type_mismatch fmt_label (wanted_type, arg_type,
 						  pointer_count);
   range_label_for_type_mismatch param_label (arg_type, wanted_type);
-#else
-# define format_warning_at_substring(a,b,c,d,...) \
-	format_warning_at_substring(a,c,__VA_ARGS__)
-#endif
 
   /* Get a string for use as a replacement fix-it hint for the range in
      fmt_loc, or NULL.  */
   char *corrected_substring
     = get_corrected_substring (fmt_loc, type, arg_type, fki,
 			       offset_to_type_start, conversion_char);
+
+  format_string_diagnostic_t diag(fmt_loc, &fmt_label, param_loc, &param_label,
+				  corrected_substring);
+# define format_warning_at_substring(a,b,c,d,e,...) \
+	diag.emit_warning(__VA_ARGS__)
+#else
+# define format_warning_at_substring(a,b,c,d,...) \
+	format_warning_at_substring(a,c,__VA_ARGS__)
+  /* Get a string for use as a replacement fix-it hint for the range in
+     fmt_loc, or NULL.  */
+  char *corrected_substring
+    = get_corrected_substring (fmt_loc, type, arg_type, fki,
+			       offset_to_type_start, conversion_char);
+
+#endif
 
   if (wanted_type_name)
     {
@@ -3847,6 +3878,8 @@ setup_type (const char *name, tree *dst)
     }
   if (tmp && TREE_CODE (tmp) == TYPE_DECL)
     *dst = tmp;
+  else
+    *dst = NULL;
 }
 
 static void
