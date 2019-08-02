@@ -262,7 +262,7 @@ extern "C" {
 #include <inttypes.h>
 
 #ifdef _FRR_ATTRIBUTE_PRINTFRR
-#define PRINTFRR(a, b) __attribute__((printfrr(a, b)))
+#define PRINTFRR(a, b) __attribute__((frr_format("frr_printf", a, b)))
 
 #else /* !_FRR_ATTRIBUTE_PRINTFRR */
 #define PRINTFRR(a, b) __attribute__((format(printf, a, b)))
