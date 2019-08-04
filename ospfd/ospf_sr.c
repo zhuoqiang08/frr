@@ -608,26 +608,8 @@ static int compute_prefix_nhlfe(struct sr_prefix *srp)
 /* Send MPLS Label entry to Zebra for installation or deletion */
 static int ospf_zebra_send_mpls_labels(int cmd, struct sr_nhlfe nhlfe)
 {
-	struct stream *s;
-
-	/* Reset stream. */
-	s = zclient->obuf;
-	stream_reset(s);
-
-	zclient_create_header(s, cmd, VRF_DEFAULT);
-	stream_putc(s, ZEBRA_LSP_SR);
-	/* OSPF Segment Routing currently support only IPv4 */
-	stream_putl(s, nhlfe.prefv4.family);
-	stream_put_in_addr(s, &nhlfe.prefv4.prefix);
-	stream_putc(s, nhlfe.prefv4.prefixlen);
-	stream_put_in_addr(s, &nhlfe.nexthop);
-	stream_putl(s, nhlfe.ifindex);
-	stream_putc(s, OSPF_SR_PRIORITY_DEFAULT);
-	stream_putl(s, nhlfe.label_in);
-	stream_putl(s, nhlfe.label_out);
-
-	/* Put length at the first point of the stream. */
-	stream_putw_at(s, 0, stream_get_endp(s));
+	struct zapi_labels zl = {};
+	struct zapi_nexthop_label *znh;
 
 	if (IS_DEBUG_OSPF_SR)
 		zlog_debug("    |-  %s LSP %u/%u for %s/%u via %u",
@@ -636,7 +618,25 @@ static int ospf_zebra_send_mpls_labels(int cmd, struct sr_nhlfe nhlfe)
 			   inet_ntoa(nhlfe.prefv4.prefix),
 			   nhlfe.prefv4.prefixlen, nhlfe.ifindex);
 
-	return zclient_send_message(zclient);
+	zl.type = ZEBRA_LSP_OSPF_SR;
+	zl.local_label = nhlfe.label_in;
+
+	SET_FLAG(zl.message, ZAPI_LABELS_FTN);
+	zl.route.prefix.family = nhlfe.prefv4.family;
+	zl.route.prefix.prefixlen = nhlfe.prefv4.prefixlen;
+	zl.route.prefix.u.prefix4 = nhlfe.prefv4.prefix;
+	zl.route.type = ZEBRA_ROUTE_OSPF;
+	zl.route.instance = 0;
+
+	zl.nexthop_num = 1;
+	znh = &zl.nexthops[0];
+	znh->type = NEXTHOP_TYPE_IPV4_IFINDEX;
+	znh->family = AF_INET;
+	znh->address.ipv4 = nhlfe.nexthop;
+	znh->ifindex = nhlfe.ifindex;
+	znh->label = nhlfe.label_out;
+
+	return zebra_send_mpls_labels(zclient, cmd, &zl);
 }
 
 /* Request zebra to install/remove FEC in FIB */

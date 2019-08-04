@@ -52,9 +52,10 @@
 #include "isisd/isis_csm.h"
 #include "isisd/isis_adjacency.h"
 #include "isisd/isis_spf.h"
-#include "isisd/isis_te.h"
 #include "isisd/isis_mt.h"
 #include "isisd/isis_tlvs.h"
+#include "isisd/isis_te.h"
+#include "isisd/isis_sr.h"
 #include "isisd/fabricd.h"
 #include "isisd/isis_tx_queue.h"
 
@@ -762,9 +763,15 @@ static void lsp_build_ext_reach_ipv4(struct isis_lsp *lsp,
 		if (area->oldmetric)
 			isis_tlvs_add_oldstyle_ip_reach(lsp->tlvs, ipv4,
 							metric);
-		if (area->newmetric)
-			isis_tlvs_add_extended_ip_reach(lsp->tlvs, ipv4,
-							metric);
+		if (area->newmetric) {
+			struct sr_prefix_cfg *pcfg = NULL;
+
+			if (area->srdb.enabled)
+				pcfg = isis_sr_cfg_prefix_find(area, ipv4);
+
+			isis_tlvs_add_extended_ip_reach(lsp->tlvs, ipv4, metric,
+							true, pcfg);
+		}
 	}
 }
 
@@ -791,9 +798,14 @@ static void lsp_build_ext_reach_ipv6(struct isis_lsp *lsp,
 			metric = MAX_WIDE_PATH_METRIC;
 
 		if (!src_p || !src_p->prefixlen) {
+			struct sr_prefix_cfg *pcfg = NULL;
+
+			if (area->srdb.enabled)
+				pcfg = isis_sr_cfg_prefix_find(area, p);
+
 			isis_tlvs_add_ipv6_reach(lsp->tlvs,
 						 isis_area_ipv6_topology(area),
-						 p, metric);
+						 p, metric, true, pcfg);
 		} else if (isis_area_ipv6_dstsrc_enabled(area)) {
 			isis_tlvs_add_ipv6_dstsrc_reach(lsp->tlvs,
 							ISIS_MT_IPV6_DSTSRC,
@@ -908,10 +920,20 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 			  area->area_tag);
 	}
 
-	/* IPv4 address and TE router ID TLVs. In case of the first one we don't
-	 * follow "C" vendor, but "J" vendor behavior - one IPv4 address is put
-	 * into
-	 * LSP and this address is same as router id. */
+	/* Add Router Capability TLV if Segment Routing is enable */
+	if (area->srdb.enabled && isis->router_id != 0) {
+		struct in_addr id = {.s_addr = isis->router_id};
+		isis_tlvs_set_router_capability(lsp->tlvs, id, &area->srdb);
+		lsp_debug("ISIS (%s): Adding Router Capabilities information",
+			  area->area_tag);
+	}
+
+	/* IPv4 address and TE router ID TLVs.
+	 * In case of the first one we don't follow "C" vendor,
+	 * but "J" vendor behavior - one IPv4 address is put
+	 * into LSP. TE router ID will be the same if MPLS-TE
+	 * is not activate or MPLS-TE router-id not specified
+	 */
 	if (isis->router_id != 0) {
 		struct in_addr id = {.s_addr = isis->router_id};
 		inet_ntop(AF_INET, &id, buf, sizeof(buf));
@@ -919,11 +941,14 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 			  area->area_tag, buf);
 		isis_tlvs_add_ipv4_address(lsp->tlvs, &id);
 
-		/* Exactly same data is put into TE router ID TLV, but only if
-		 * new style
-		 * TLV's are in use. */
+		/* If new style TLV's are in use, add TE router ID TLV
+		 * Check if MPLS-TE is activate and mpls-te router-id set
+		 * otherwise add exactly same data as for IPv4 address
+		 */
 		if (area->newmetric) {
-
+			if (IS_MPLS_TE(area->mta)
+			    && area->mta->router_id.s_addr != 0)
+				id.s_addr = area->mta->router_id.s_addr;
 			lsp_debug(
 				"ISIS (%s): Adding router ID also as TE router ID tlv.",
 				area->area_tag);
@@ -989,13 +1014,21 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 				}
 
 				if (area->newmetric) {
+					struct sr_prefix_cfg *pcfg = NULL;
+
 					lsp_debug(
 						"ISIS (%s): Adding te-style IP reachability for %s",
 						area->area_tag,
 						prefix2str(ipv4, buf,
 							   sizeof(buf)));
+
+					if (area->srdb.enabled)
+						pcfg = isis_sr_cfg_prefix_find(
+							area, ipv4);
+
 					isis_tlvs_add_extended_ip_reach(
-						lsp->tlvs, ipv4, metric);
+						lsp->tlvs, ipv4, metric, false,
+						pcfg);
 				}
 			}
 		}
@@ -1004,16 +1037,24 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 		    && circuit->ipv6_non_link->count > 0) {
 			struct listnode *ipnode;
 			struct prefix_ipv6 *ipv6;
+
 			for (ALL_LIST_ELEMENTS_RO(circuit->ipv6_non_link,
 						  ipnode, ipv6)) {
+				struct sr_prefix_cfg *pcfg = NULL;
+
 				lsp_debug(
 					"ISIS (%s): Adding IPv6 reachability for %s",
 					area->area_tag,
 					prefix2str(ipv6, buf, sizeof(buf)));
+
+				if (area->srdb.enabled)
+					pcfg = isis_sr_cfg_prefix_find(area,
+								       ipv6);
+
 				isis_tlvs_add_ipv6_reach(
 					lsp->tlvs,
 					isis_area_ipv6_topology(area), ipv6,
-					metric);
+					metric, false, pcfg);
 			}
 		}
 
@@ -1036,25 +1077,10 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 							lsp->tlvs, ne_id,
 							metric);
 					}
-					if (area->newmetric) {
-						uint8_t subtlvs[256];
-						uint8_t subtlv_len;
-
-						if (IS_MPLS_TE(area->mta)
-						    && circuit->interface
-						    && HAS_LINK_PARAMS(
-							       circuit->interface))
-							subtlv_len = add_te_subtlvs(
-								subtlvs,
-								circuit->mtc);
-						else
-							subtlv_len = 0;
-
+					if (area->newmetric)
 						tlvs_add_mt_bcast(
 							lsp->tlvs, circuit,
-							level, ne_id, metric,
-							subtlvs, subtlv_len);
-					}
+							level, ne_id, metric);
 				}
 			} else {
 				lsp_debug(
@@ -1079,36 +1105,6 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 						lsp->tlvs, ne_id, metric);
 				}
 				if (area->newmetric) {
-					uint8_t subtlvs[256];
-					uint8_t subtlv_len;
-
-					if (IS_MPLS_TE(area->mta)
-					    && circuit->interface != NULL
-					    && HAS_LINK_PARAMS(
-						       circuit->interface))
-						/* Update Local and Remote IP
-						 * address for MPLS TE circuit
-						 * parameters */
-						/* NOTE sure that it is the
-						 * pertinent place for that
-						 * updates */
-						/* Local IP address could be
-						 * updated in isis_circuit.c -
-						 * isis_circuit_add_addr() */
-						/* But, where update remote IP
-						 * address ? in isis_pdu.c -
-						 * process_p2p_hello() ? */
-
-						/* Add SubTLVs & Adjust real
-						 * size of SubTLVs */
-						subtlv_len = add_te_subtlvs(
-							subtlvs, circuit->mtc);
-					else
-						/* Or keep only TE metric with
-						 * no SubTLVs if MPLS_TE is off
-						 */
-						subtlv_len = 0;
-
 					uint32_t neighbor_metric;
 					if (fabricd_tier(area) == 0) {
 						neighbor_metric = 0xffe;
@@ -1117,8 +1113,7 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 					}
 
 					tlvs_add_mt_p2p(lsp->tlvs, circuit,
-							ne_id, neighbor_metric,
-							subtlvs, subtlv_len);
+							ne_id, neighbor_metric);
 				}
 			} else {
 				lsp_debug(
@@ -1512,7 +1507,7 @@ static void lsp_build_pseudo(struct isis_lsp *lsp, struct isis_circuit *circuit,
 	}
 	if (circuit->area->newmetric) {
 		isis_tlvs_add_extended_reach(lsp->tlvs, ISIS_MT_IPV4_UNICAST,
-					     ne_id, 0, NULL, 0);
+					     ne_id, 0, circuit->ext);
 		lsp_debug(
 			"ISIS (%s): Adding %s.%02x as te-style neighbor (self)",
 			area->area_tag, sysid_print(ne_id),
@@ -1554,7 +1549,7 @@ static void lsp_build_pseudo(struct isis_lsp *lsp, struct isis_circuit *circuit,
 		if (circuit->area->newmetric) {
 			isis_tlvs_add_extended_reach(lsp->tlvs,
 						     ISIS_MT_IPV4_UNICAST,
-						     ne_id, 0, NULL, 0);
+						     ne_id, 0, circuit->ext);
 			lsp_debug(
 				"ISIS (%s): Adding %s.%02x as te-style neighbor (peer)",
 				area->area_tag, sysid_print(ne_id),

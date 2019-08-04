@@ -30,6 +30,8 @@
 #include "isisd/isis_redist.h"
 #include "isisd/isis_pdu_counter.h"
 #include "isisd/isis_circuit.h"
+#include "isisd/isis_tlvs.h"
+#include "isisd/isis_sr.h"
 #include "isis_flags.h"
 #include "isis_lsp.h"
 #include "isis_memory.h"
@@ -70,7 +72,6 @@ struct isis {
 	struct list *area_list;	/* list of IS-IS areas */
 	struct list *init_circ_list;
 	struct list *nexthops;		  /* IPv4 next hops from this IS */
-	struct list *nexthops6;		  /* IPv6 next hops from this IS */
 	uint8_t max_area_addrs;		  /* maximumAreaAdresses */
 	struct area_addr *man_area_addrs; /* manualAreaAddresses */
 	uint32_t debugs;		  /* bitmap for debug */
@@ -167,6 +168,8 @@ struct isis_area {
 	struct list *mt_settings;
 	/* MPLS-TE settings */
 	struct mpls_te_area *mta;
+	/* Segment Routing settings */
+	struct isis_sr_db srdb;
 	int ipv6_circuits;
 	bool purge_originator;
 	/* Counters */
@@ -222,6 +225,10 @@ int isis_area_passwd_hmac_md5_set(struct isis_area *area, int level,
 
 extern const struct frr_yang_module_info frr_isisd_info;
 extern void isis_northbound_init(void);
+
+/* YANG paths */
+#define ISIS_INSTANCE	"/frr-isisd:isis/instance"
+#define ISIS_SR		"/frr-isisd:isis/instance/segment-routing"
 
 /* YANG northbound notifications */
 extern void isis_notif_db_overload(const struct isis_area *area, bool overload);
@@ -281,6 +288,7 @@ extern struct thread_master *master;
 #define DEBUG_FLOODING                   (1<<9)
 #define DEBUG_BFD                        (1<<10)
 #define DEBUG_TX_QUEUE                   (1<<11)
+#define DEBUG_SR                         (1<<12)
 
 #define lsp_debug(...)                                                         \
 	do {                                                                   \
