@@ -41,9 +41,10 @@
 #include "isisd/isis_pdu.h"
 #include "isisd/isis_lsp.h"
 #include "isisd/isis_te.h"
+#include "isisd/isis_sr.h"
 
 DEFINE_MTYPE_STATIC(ISISD, ISIS_TLV, "ISIS TLVs")
-DEFINE_MTYPE_STATIC(ISISD, ISIS_SUBTLV, "ISIS Sub-TLVs")
+DEFINE_MTYPE(ISISD, ISIS_SUBTLV, "ISIS Sub-TLVs")
 DEFINE_MTYPE_STATIC(ISISD, ISIS_MT_ITEM_LIST, "ISIS MT Item Lists")
 
 typedef int (*unpack_tlv_func)(enum isis_tlv_context context, uint8_t tlv_type,
@@ -4589,24 +4590,42 @@ void isis_tlvs_del_lan_adj_sid(struct isis_ext_subtlvs *exts,
 }
 
 void isis_tlvs_add_extended_ip_reach(struct isis_tlvs *tlvs,
-				     struct prefix_ipv4 *dest, uint32_t metric)
+				     struct prefix_ipv4 *dest, uint32_t metric,
+				     bool external, struct sr_prefix_cfg *pcfg)
 {
 	struct isis_extended_ip_reach *r = XCALLOC(MTYPE_ISIS_TLV, sizeof(*r));
 
 	r->metric = metric;
 	memcpy(&r->prefix, dest, sizeof(*dest));
 	apply_mask_ipv4(&r->prefix);
+	if (pcfg) {
+		struct isis_prefix_sid *psid =
+			XCALLOC(MTYPE_ISIS_SUBTLV, sizeof(*psid));
+
+		isis_sr_prefix_cfg2subtlv(pcfg, external, psid);
+		r->subtlvs = isis_alloc_subtlvs(ISIS_CONTEXT_SUBTLV_IP_REACH);
+		append_item(&r->subtlvs->prefix_sids, (struct isis_item *)psid);
+	}
 	append_item(&tlvs->extended_ip_reach, (struct isis_item *)r);
 }
 
 void isis_tlvs_add_ipv6_reach(struct isis_tlvs *tlvs, uint16_t mtid,
-			      struct prefix_ipv6 *dest, uint32_t metric)
+			      struct prefix_ipv6 *dest, uint32_t metric,
+			      bool external, struct sr_prefix_cfg *pcfg)
 {
 	struct isis_ipv6_reach *r = XCALLOC(MTYPE_ISIS_TLV, sizeof(*r));
 
 	r->metric = metric;
 	memcpy(&r->prefix, dest, sizeof(*dest));
 	apply_mask_ipv6(&r->prefix);
+	if (pcfg) {
+		struct isis_prefix_sid *psid =
+			XCALLOC(MTYPE_ISIS_SUBTLV, sizeof(*psid));
+
+		isis_sr_prefix_cfg2subtlv(pcfg, external, psid);
+		r->subtlvs = isis_alloc_subtlvs(ISIS_CONTEXT_SUBTLV_IP_REACH);
+		append_item(&r->subtlvs->prefix_sids, (struct isis_item *)psid);
+	}
 
 	struct isis_item_list *l;
 	l = (mtid == ISIS_MT_IPV4_UNICAST)
@@ -4620,7 +4639,7 @@ void isis_tlvs_add_ipv6_dstsrc_reach(struct isis_tlvs *tlvs, uint16_t mtid,
 				     struct prefix_ipv6 *src,
 				     uint32_t metric)
 {
-	isis_tlvs_add_ipv6_reach(tlvs, mtid, dest, metric);
+	isis_tlvs_add_ipv6_reach(tlvs, mtid, dest, metric, false, NULL);
 	struct isis_item_list *l = isis_get_mt_items(&tlvs->mt_ipv6_reach,
 						     mtid);
 

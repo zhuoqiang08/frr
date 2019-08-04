@@ -143,6 +143,7 @@ static void adjinfo2nexthop(int family, struct list *nexthops,
 				nh = isis_nexthop_create(
 					AF_INET, &ip,
 					adj->circuit->interface->ifindex);
+				nh->adj = adj;
 				listnode_add(nexthops, nh);
 				break;
 			}
@@ -157,6 +158,7 @@ static void adjinfo2nexthop(int family, struct list *nexthops,
 				nh = isis_nexthop_create(
 					AF_INET6, &ip,
 					adj->circuit->interface->ifindex);
+				nh->adj = adj;
 				listnode_add(nexthops, nh);
 				break;
 			}

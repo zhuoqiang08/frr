@@ -121,6 +121,49 @@ struct isis_adjacency *isis_adj_lookup_snpa(const uint8_t *ssnpa,
 	return NULL;
 }
 
+bool isis_adj_exists(const struct isis_area *area, const uint8_t *sysid)
+{
+	struct isis_circuit *circuit;
+	struct listnode *node;
+
+	for (ALL_LIST_ELEMENTS_RO(area->circuit_list, node, circuit)) {
+		struct isis_adjacency *adj;
+		struct listnode *anode;
+		struct list *adjdb;
+
+		switch (circuit->circ_type) {
+		case CIRCUIT_T_BROADCAST:
+			for (int level = IS_LEVEL_1; level <= IS_LEVEL_2; level++) {
+				if ((area->is_type & level) == 0)
+					continue;
+
+				adjdb = circuit->u.bc.adjdb[level - 1];
+				if (!adjdb)
+					continue;
+
+				for (ALL_LIST_ELEMENTS_RO(adjdb, anode, adj)) {
+					if (!memcmp(adj->sysid, sysid,
+						    ISIS_SYS_ID_LEN))
+						return true;
+				}
+			}
+			break;
+		case CIRCUIT_T_P2P:
+			adj = circuit->u.p2p.neighbor;
+			if (!adj)
+				break;
+
+			if (!memcmp(adj->sysid, sysid, ISIS_SYS_ID_LEN))
+				return true;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return false;
+}
+
 DEFINE_HOOK(isis_adj_state_change_hook, (struct isis_adjacency *adj), (adj))
 
 void isis_delete_adj(void *arg)
@@ -504,6 +547,12 @@ void isis_adj_print_vty(struct isis_adjacency *adj, struct vty *vty,
 				vty_out(vty, "      %s\n",
 					inet_ntoa(adj->ipv4_addresses[i]));
 		}
+		if (adj->sr.ipv4.adj_sid)
+			vty_out(vty, "    IPv4 Adjacency SID: %u\n",
+				adj->sr.ipv4.adj_sid->sid);
+		if (adj->sr.ipv4.ladj_sid)
+			vty_out(vty, "    IPv4 Adjacency SID: %u\n",
+				adj->sr.ipv4.ladj_sid->sid);
 		if (adj->ipv6_address_count) {
 			vty_out(vty, "    IPv6 Address(es):\n");
 			for (unsigned int i = 0; i < adj->ipv6_address_count;
@@ -514,6 +563,12 @@ void isis_adj_print_vty(struct isis_adjacency *adj, struct vty *vty,
 				vty_out(vty, "      %s\n", buf);
 			}
 		}
+		if (adj->sr.ipv6.adj_sid)
+			vty_out(vty, "    IPv6 Adjacency SID: %u\n",
+				adj->sr.ipv6.adj_sid->sid);
+		if (adj->sr.ipv6.ladj_sid)
+			vty_out(vty, "    IPv6 Adjacency SID: %u\n",
+				adj->sr.ipv6.ladj_sid->sid);
 		vty_out(vty, "\n");
 	}
 	return;
