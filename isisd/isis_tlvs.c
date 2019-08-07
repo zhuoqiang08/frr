@@ -3449,10 +3449,22 @@ static void tlvs_protocols_supported_to_adj(struct isis_tlvs *tlvs,
 	memcpy(adj->nlpids.nlpids, reduced.nlpids, reduced.count);
 }
 
+DEFINE_HOOK(isis_adj_ipv4_enabled_hook, (struct isis_adjacency *adj), (adj))
+DEFINE_HOOK(isis_adj_ipv4_disabled_hook, (struct isis_adjacency *adj), (adj))
+DEFINE_HOOK(isis_adj_ipv6_enabled_hook, (struct isis_adjacency *adj), (adj))
+DEFINE_HOOK(isis_adj_ipv6_disabled_hook, (struct isis_adjacency *adj), (adj))
+
 static void tlvs_ipv4_addresses_to_adj(struct isis_tlvs *tlvs,
 				       struct isis_adjacency *adj,
 				       bool *changed)
 {
+	bool ipv4_enabled = false;
+
+	if (adj->ipv4_address_count == 0 && tlvs->ipv4_address.count > 0)
+		ipv4_enabled = true;
+	else if (adj->ipv4_address_count > 0 && tlvs->ipv4_address.count == 0)
+		hook_call(isis_adj_ipv4_disabled_hook, adj);
+
 	if (adj->ipv4_address_count != tlvs->ipv4_address.count) {
 		*changed = true;
 		adj->ipv4_address_count = tlvs->ipv4_address.count;
@@ -3476,12 +3488,22 @@ static void tlvs_ipv4_addresses_to_adj(struct isis_tlvs *tlvs,
 		*changed = true;
 		adj->ipv4_addresses[i] = addr->addr;
 	}
+
+	if (ipv4_enabled)
+		hook_call(isis_adj_ipv4_enabled_hook, adj);
 }
 
 static void tlvs_ipv6_addresses_to_adj(struct isis_tlvs *tlvs,
 				       struct isis_adjacency *adj,
 				       bool *changed)
 {
+	bool ipv6_enabled = false;
+
+	if (adj->ipv6_address_count == 0 && tlvs->ipv6_address.count > 0)
+		ipv6_enabled = true;
+	else if (adj->ipv6_address_count > 0 && tlvs->ipv6_address.count == 0)
+		hook_call(isis_adj_ipv6_disabled_hook, adj);
+
 	if (adj->ipv6_address_count != tlvs->ipv6_address.count) {
 		*changed = true;
 		adj->ipv6_address_count = tlvs->ipv6_address.count;
@@ -3505,6 +3527,9 @@ static void tlvs_ipv6_addresses_to_adj(struct isis_tlvs *tlvs,
 		*changed = true;
 		adj->ipv6_addresses[i] = addr->addr;
 	}
+
+	if (ipv6_enabled)
+		hook_call(isis_adj_ipv6_enabled_hook, adj);
 }
 
 void isis_tlvs_to_adj(struct isis_tlvs *tlvs, struct isis_adjacency *adj,
