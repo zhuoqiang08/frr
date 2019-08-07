@@ -196,7 +196,7 @@ FRR_DAEMON_INFO(isisd, ISIS, .vty_port = ISISD_VTY_PORT,
 int main(int argc, char **argv, char **envp)
 {
 	int opt;
-	int instance = 0;
+	int instance = 1;
 
 #ifdef FABRICD
 	frr_preinit(&fabricd_di, argc, argv);
@@ -219,7 +219,7 @@ int main(int argc, char **argv, char **envp)
 			break;
 		case 'I':
 			instance = atoi(optarg);
-			if (instance > (unsigned short)-1)
+			if (instance < 1 || instance > (unsigned short)-1)
 				zlog_err("Instance %i out of range (0..%u)",
 					 instance, (unsigned short)-1);
 			break;

@@ -63,6 +63,8 @@ DEFINE_HOOK(isis_route_update_hook,
 static struct list *label_chunk_list;
 static struct listnode *current_label_chunk;
 
+void isis_zebra_label_manager_connect(void);
+
 /* Router-id update message from zebra. */
 static int isis_router_id_update_zebra(ZAPI_CALLBACK_ARGS)
 {
@@ -409,6 +411,9 @@ int isis_zebra_request_label_range(uint32_t base, uint32_t chunk_size)
 	int ret;
 	uint32_t start, end;
 
+	if (zclient_sync->sock == -1)
+		isis_zebra_label_manager_connect();
+
 	ret = lm_get_label_chunk(zclient_sync, 0, base, chunk_size, &start,
 				 &end);
 	if (ret < 0) {
@@ -423,6 +428,9 @@ void isis_zebra_release_label_range(uint32_t start, uint32_t end)
 {
 	int ret;
 
+	if (zclient_sync->sock == -1)
+		isis_zebra_label_manager_connect();
+
 	ret = lm_release_label_chunk(zclient_sync, start, end);
 	if (ret < 0)
 		zlog_warn("%s: error releasing label range!", __func__);
@@ -433,6 +441,9 @@ static int isis_zebra_get_label_chunk(void)
 	int ret;
 	uint32_t start, end;
 	struct label_chunk *new_label_chunk;
+
+	if (zclient_sync->sock == -1)
+		isis_zebra_label_manager_connect();
 
 	ret = lm_get_label_chunk(zclient_sync, 0, MPLS_LABEL_BASE_ANY,
 				 CHUNK_SIZE, &start, &end);
@@ -503,6 +514,28 @@ static void isis_zebra_del_label_chunk(void *val)
 	free(val);
 }
 
+void isis_zebra_label_manager_connect(void)
+{
+	/* Connect to label manager. */
+	while (zclient_socket_connect(zclient_sync) < 0) {
+		zlog_warn("%s: error connecting synchronous zclient!",
+			  __func__);
+		sleep(1);
+	}
+	set_nonblocking(zclient_sync->sock);
+	while (lm_label_manager_connect(zclient_sync, 0) != 0) {
+		zlog_warn("%s: error connecting to label manager!", __func__);
+		sleep(1);
+	}
+
+	label_chunk_list = list_new();
+	label_chunk_list->del = isis_zebra_del_label_chunk;
+	while (isis_zebra_get_label_chunk() != 0) {
+		zlog_warn("%s: error getting first label chunk!", __func__);
+		sleep(1);
+	}
+}
+
 static void isis_zebra_connected(struct zclient *zclient)
 {
 	zclient_send_reg_requests(zclient, VRF_DEFAULT);
@@ -531,25 +564,6 @@ void isis_zebra_init(struct thread_master *master, int instance)
 	zclient_sync->redist_default = ZEBRA_ROUTE_ISIS;
 	zclient_sync->instance = instance;
 	zclient_sync->privs = &isisd_privs;
-
-	/* Connect to label manager. */
-	while (zclient_socket_connect(zclient_sync) < 0) {
-		zlog_warn("%s: error connecting synchronous zclient!",
-			  __func__);
-		sleep(1);
-	}
-	set_nonblocking(zclient_sync->sock);
-	while (lm_label_manager_connect(zclient_sync, 0) != 0) {
-		zlog_warn("%s: error connecting to label manager!", __func__);
-		sleep(1);
-	}
-
-	label_chunk_list = list_new();
-	label_chunk_list->del = isis_zebra_del_label_chunk;
-	while (isis_zebra_get_label_chunk() != 0) {
-		zlog_warn("%s: error getting first label chunk!", __func__);
-		sleep(1);
-	}
 }
 
 void isis_zebra_stop(void)
