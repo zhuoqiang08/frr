@@ -1749,7 +1749,7 @@ static void zread_vrf_unregister(ZAPI_HANDLER_ARGS)
 	vrf_bitmap_unset(client->ridinfo, zvrf_id(zvrf));
 }
 
-static void zread_mpls_labels(ZAPI_HANDLER_ARGS)
+static void zread_mpls_labels_add(ZAPI_HANDLER_ARGS)
 {
 	struct stream *s;
 	struct zapi_labels zl;
@@ -1766,24 +1766,98 @@ static void zread_mpls_labels(ZAPI_HANDLER_ARGS)
 	if (!mpls_enabled)
 		return;
 
-	if (hdr->command == ZEBRA_MPLS_LABELS_ADD) {
-		mpls_lsp_install(zvrf, zl.type, zl.local_label,
-				 zl.nexthop.label, zl.nexthop.type,
-				 &zl.nexthop.address, zl.nexthop.ifindex);
+	for (int i = 0; i < zl.nexthop_num; i++) {
+		struct zapi_nexthop_label *znh;
+
+		znh = &zl.nexthops[i];
+		mpls_lsp_install(zvrf, zl.type, zl.local_label, znh->label,
+				 znh->type, &znh->address, znh->ifindex);
+
 		if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN))
 			mpls_ftn_update(1, zvrf, zl.type, &zl.route.prefix,
-					zl.nexthop.type, &zl.nexthop.address,
-					zl.nexthop.ifindex, zl.route.type,
-					zl.route.instance, zl.nexthop.label);
-	} else if (hdr->command == ZEBRA_MPLS_LABELS_DELETE) {
-		mpls_lsp_uninstall(zvrf, zl.type, zl.local_label,
-				   zl.nexthop.type, &zl.nexthop.address,
-				   zl.nexthop.ifindex);
+					znh->type, &znh->address, znh->ifindex,
+					zl.route.type, zl.route.instance,
+					znh->label);
+	}
+}
+
+static void zread_mpls_labels_replace(ZAPI_HANDLER_ARGS)
+{
+	struct stream *s;
+	struct zapi_labels zl;
+
+	/* Get input stream.  */
+	s = msg;
+	if (zapi_labels_decode(s, &zl) < 0) {
+		if (IS_ZEBRA_DEBUG_RECV)
+			zlog_debug("%s: Unable to decode zapi_labels sent",
+				   __PRETTY_FUNCTION__);
+		return;
+	}
+
+	if (!mpls_enabled)
+		return;
+
+	mpls_lsp_uninstall_all_vrf(zvrf, zl.type, zl.local_label);
+	if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN))
+		mpls_ftn_uninstall(zvrf, zl.type, &zl.route.prefix,
+				   zl.route.type, zl.route.instance);
+
+	for (int i = 0; i < zl.nexthop_num; i++) {
+		struct zapi_nexthop_label *znh;
+
+		znh = &zl.nexthops[i];
+		mpls_lsp_install(zvrf, zl.type, zl.local_label, znh->label,
+				 znh->type, &znh->address, znh->ifindex);
+
+		if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN)) {
+			mpls_ftn_update(1, zvrf, zl.type, &zl.route.prefix,
+					znh->type, &znh->address, znh->ifindex,
+					zl.route.type, zl.route.instance,
+					znh->label);
+		}
+	}
+}
+
+static void zread_mpls_labels_delete(ZAPI_HANDLER_ARGS)
+{
+	struct stream *s;
+	struct zapi_labels zl;
+
+	/* Get input stream.  */
+	s = msg;
+	if (zapi_labels_decode(s, &zl) < 0) {
+		if (IS_ZEBRA_DEBUG_RECV)
+			zlog_debug("%s: Unable to decode zapi_labels sent",
+				   __PRETTY_FUNCTION__);
+		return;
+	}
+
+	if (!mpls_enabled)
+		return;
+
+	if (zl.nexthop_num > 0) {
+		for (int i = 0; i < zl.nexthop_num; i++) {
+			struct zapi_nexthop_label *znh;
+
+			znh = &zl.nexthops[i];
+			mpls_lsp_uninstall(zvrf, zl.type, zl.local_label,
+					   znh->type, &znh->address,
+					   znh->ifindex);
+
+			if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN))
+				mpls_ftn_update(0, zvrf, zl.type,
+						&zl.route.prefix, znh->type,
+						&znh->address, znh->ifindex,
+						zl.route.type,
+						zl.route.instance, znh->label);
+		}
+	} else {
+		mpls_lsp_uninstall_all_vrf(zvrf, zl.type, zl.local_label);
+
 		if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN))
-			mpls_ftn_update(0, zvrf, zl.type, &zl.route.prefix,
-					zl.nexthop.type, &zl.nexthop.address,
-					zl.nexthop.ifindex, zl.route.type,
-					zl.route.instance, zl.nexthop.label);
+			mpls_ftn_uninstall(zvrf, zl.type, &zl.route.prefix,
+					   zl.route.type, zl.route.instance);
 	}
 }
 
@@ -2409,8 +2483,9 @@ void (*zserv_handlers[])(ZAPI_HANDLER_ARGS) = {
 	[ZEBRA_INTERFACE_ENABLE_RADV] = NULL,
 	[ZEBRA_INTERFACE_DISABLE_RADV] = NULL,
 #endif
-	[ZEBRA_MPLS_LABELS_ADD] = zread_mpls_labels,
-	[ZEBRA_MPLS_LABELS_DELETE] = zread_mpls_labels,
+	[ZEBRA_MPLS_LABELS_ADD] = zread_mpls_labels_add,
+	[ZEBRA_MPLS_LABELS_DELETE] = zread_mpls_labels_delete,
+	[ZEBRA_MPLS_LABELS_REPLACE] = zread_mpls_labels_replace,
 	[ZEBRA_IPMR_ROUTE_STATS] = zebra_ipmr_route_stats,
 	[ZEBRA_LABEL_MANAGER_CONNECT] = zread_label_manager_request,
 	[ZEBRA_LABEL_MANAGER_CONNECT_ASYNC] = zread_label_manager_request,
