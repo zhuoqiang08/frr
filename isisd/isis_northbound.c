@@ -1449,8 +1449,13 @@ static int isis_instance_mpls_te_destroy(enum nb_event event,
 		if (circuit->ext == NULL || (!IS_EXT_TE(circuit->ext)))
 			continue;
 
-		/* disable MPLS_TE Circuit */
-		circuit->ext->status = 0;
+		/* Reset TE subTLVs keeping SR one's */
+		if (IS_SUBTLV(circuit->ext, EXT_ADJ_SID))
+			circuit->ext->status = EXT_ADJ_SID;
+		else if (IS_SUBTLV(circuit->ext, EXT_LAN_ADJ_SID))
+			circuit->ext->status = EXT_LAN_ADJ_SID;
+		else
+			circuit->ext->status = 0;
 
 		/* Re-originate circuit without STD_TE & GMPLS parameters */
 		if (circuit->area)

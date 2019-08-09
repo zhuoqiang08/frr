@@ -239,8 +239,13 @@ void isis_link_params_update(struct isis_circuit *circuit,
 	} else {
 		zlog_debug("  |- Reset Extended subTLVs status 0x%x",
 			   ext->status);
-		/* Reset TE subTLVs */
-		ext->status = 0;
+		/* Reset TE subTLVs keeping SR one's */
+		if (IS_SUBTLV(ext, EXT_ADJ_SID))
+			ext->status = EXT_ADJ_SID;
+		else if (IS_SUBTLV(ext, EXT_LAN_ADJ_SID))
+			ext->status = EXT_LAN_ADJ_SID;
+		else
+			ext->status = 0;
 	}
 
 	return;
