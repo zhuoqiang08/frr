@@ -186,7 +186,7 @@ static int unpack_item_prefix_sid(uint16_t mtid, uint8_t len, struct stream *s,
 	sid.flags = stream_getc(s);
 	if ((sid.flags & ISIS_PREFIX_SID_VALUE)
 	    != (sid.flags & ISIS_PREFIX_SID_LOCAL)) {
-		sbuf_push(log, indent, "Flags inplausible: Local Flag needs to match Value Flag\n");
+		sbuf_push(log, indent, "Flags implausible: Local Flag needs to match Value Flag\n");
 		return 0;
 	}
 
@@ -274,7 +274,7 @@ static int unpack_subtlv_ipv6_source_prefix(enum isis_tlv_context context,
 
 	p.prefixlen = stream_getc(s);
 	if (p.prefixlen > 128) {
-		sbuf_push(log, indent, "Prefixlen %u is inplausible for IPv6\n",
+		sbuf_push(log, indent, "Prefixlen %u is implausible for IPv6\n",
 			  p.prefixlen);
 		return 1;
 	}
@@ -1346,7 +1346,7 @@ static int unpack_item_extended_ip_reach(uint16_t mtid, uint8_t len,
 	rv->prefix.family = AF_INET;
 	rv->prefix.prefixlen = control & 0x3f;
 	if (rv->prefix.prefixlen > 32) {
-		sbuf_push(log, indent, "Prefixlen %u is inplausible for IPv4\n",
+		sbuf_push(log, indent, "Prefixlen %u is implausible for IPv4\n",
 			  rv->prefix.prefixlen);
 		goto out;
 	}
@@ -1832,7 +1832,7 @@ static int unpack_item_ipv6_reach(uint16_t mtid, uint8_t len, struct stream *s,
 	rv->prefix.family = AF_INET6;
 	rv->prefix.prefixlen = stream_getc(s);
 	if (rv->prefix.prefixlen > 128) {
-		sbuf_push(log, indent, "Prefixlen %u is inplausible for IPv6\n",
+		sbuf_push(log, indent, "Prefixlen %u is implausible for IPv6\n",
 			  rv->prefix.prefixlen);
 		goto out;
 	}
