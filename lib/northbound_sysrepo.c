@@ -41,6 +41,7 @@ static struct list *sysrepo_threads;
 static sr_session_ctx_t *session;
 static sr_conn_ctx_t *connection;
 static struct nb_transaction *transaction;
+static sr_subscription_ctx_t *sr_subscription;
 
 static int frr_sr_read_cb(struct thread *thread);
 static int frr_sr_write_cb(struct thread *thread);
@@ -224,6 +225,7 @@ static int frr_sr_process_change(struct nb_config *candidate,
 	data = yang_data_new(xpath, value_str);
 
 	ret = nb_candidate_edit(candidate, nb_node, nb_op, xpath, NULL, data);
+	zlog_debug(" @@@@ %s: %s", xpath, value_str);
 	yang_data_free(data);
 	if (ret != NB_OK) {
 		flog_warn(
@@ -298,6 +300,7 @@ static int frr_sr_config_change_cb_verify(sr_session_ctx_t *session,
 	}
 
 	/* Map northbound return code to sysrepo return code. */
+	zlog_debug("@@@ %s (%u): ret = %d", __func__, startup_config, ret);
 	switch (ret) {
 	case NB_OK:
 		return SR_ERR_OK;
@@ -346,6 +349,7 @@ static int frr_sr_config_change_cb(sr_session_ctx_t *session,
 				   const char *module_name,
 				   sr_notif_event_t sr_ev, void *private_ctx)
 {
+	zlog_debug("@@@ %s: %u", __func__, sr_ev);
 	switch (sr_ev) {
 	case SR_EV_ENABLED:
 		return frr_sr_config_change_cb_verify(session, module_name,
@@ -688,8 +692,8 @@ static void frr_sr_subscribe_config(struct yang_module *module)
 
 	ret = sr_module_change_subscribe(
 		session, module->name, frr_sr_config_change_cb, NULL, 0,
-		SR_SUBSCR_DEFAULT | SR_SUBSCR_EV_ENABLED,
-		&module->sr_subscription);
+		SR_SUBSCR_CTX_REUSE | SR_SUBSCR_EV_ENABLED,
+		&sr_subscription);
 	if (ret != SR_ERR_OK)
 		flog_err(EC_LIB_LIBSYSREPO, "sr_module_change_subscribe(): %s",
 			 sr_strerror(ret));
@@ -697,7 +701,6 @@ static void frr_sr_subscribe_config(struct yang_module *module)
 
 static int frr_sr_subscribe_state(const struct lys_node *snode, void *arg)
 {
-	struct yang_module *module = arg;
 	struct nb_node *nb_node;
 	int ret;
 
@@ -712,9 +715,9 @@ static int frr_sr_subscribe_state(const struct lys_node *snode, void *arg)
 	DEBUGD(&nb_dbg_client_sysrepo, "%s: providing data to '%s'", __func__,
 	       nb_node->xpath);
 
-	ret = sr_dp_get_items_subscribe(
-		session, nb_node->xpath, frr_sr_state_cb, NULL,
-		SR_SUBSCR_CTX_REUSE, &module->sr_subscription);
+	ret = sr_dp_get_items_subscribe(session, nb_node->xpath,
+					frr_sr_state_cb, NULL,
+					SR_SUBSCR_CTX_REUSE, &sr_subscription);
 	if (ret != SR_ERR_OK)
 		flog_err(EC_LIB_LIBSYSREPO, "sr_dp_get_items_subscribe(): %s",
 			 sr_strerror(ret));
@@ -724,7 +727,6 @@ static int frr_sr_subscribe_state(const struct lys_node *snode, void *arg)
 
 static int frr_sr_subscribe_rpc(const struct lys_node *snode, void *arg)
 {
-	struct yang_module *module = arg;
 	struct nb_node *nb_node;
 	int ret;
 
@@ -737,8 +739,7 @@ static int frr_sr_subscribe_rpc(const struct lys_node *snode, void *arg)
 	       nb_node->xpath);
 
 	ret = sr_rpc_subscribe(session, nb_node->xpath, frr_sr_config_rpc_cb,
-			       NULL, SR_SUBSCR_CTX_REUSE,
-			       &module->sr_subscription);
+			       NULL, SR_SUBSCR_CTX_REUSE, &sr_subscription);
 	if (ret != SR_ERR_OK)
 		flog_err(EC_LIB_LIBSYSREPO, "sr_rpc_subscribe(): %s",
 			 sr_strerror(ret));
@@ -748,7 +749,6 @@ static int frr_sr_subscribe_rpc(const struct lys_node *snode, void *arg)
 
 static int frr_sr_subscribe_action(const struct lys_node *snode, void *arg)
 {
-	struct yang_module *module = arg;
 	struct nb_node *nb_node;
 	int ret;
 
@@ -761,8 +761,7 @@ static int frr_sr_subscribe_action(const struct lys_node *snode, void *arg)
 	       nb_node->xpath);
 
 	ret = sr_action_subscribe(session, nb_node->xpath, frr_sr_config_rpc_cb,
-				  NULL, SR_SUBSCR_CTX_REUSE,
-				  &module->sr_subscription);
+				  NULL, SR_SUBSCR_CTX_REUSE, &sr_subscription);
 	if (ret != SR_ERR_OK)
 		flog_err(EC_LIB_LIBSYSREPO, "sr_action_subscribe(): %s",
 			 sr_strerror(ret));
@@ -873,14 +872,8 @@ cleanup:
 
 static int frr_sr_finish(void)
 {
-	struct yang_module *module;
-
-	RB_FOREACH (module, yang_modules, &yang_modules) {
-		if (!module->sr_subscription)
-			continue;
-		sr_unsubscribe(session, module->sr_subscription);
-	}
-
+	if (sr_subscription)
+		sr_unsubscribe(session, sr_subscription);
 	if (session)
 		sr_session_stop(session);
 	if (connection)
