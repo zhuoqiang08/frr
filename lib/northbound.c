@@ -334,21 +334,23 @@ static inline int nb_config_cb_compare(const struct nb_config_cb *a,
 		return 1;
 
 	/*
-	 * Use XPath as a tie-breaker. This will naturally sort parent nodes
-	 * before their children.
+	 * Preserve the order of the configuration changes as told by libyang.
 	 */
-	return strcmp(a->xpath, b->xpath);
+	return a->seq - b->seq;
 }
 RB_GENERATE(nb_config_cbs, nb_config_cb, entry, nb_config_cb_compare);
 
 static void nb_config_diff_add_change(struct nb_config_cbs *changes,
 				      enum nb_operation operation,
+				      uint32_t *seq,
 				      const struct lyd_node *dnode)
 {
 	struct nb_config_change *change;
 
 	change = XCALLOC(MTYPE_TMP, sizeof(*change));
 	change->cb.operation = operation;
+	change->cb.seq = *seq;
+	*seq = *seq + 1;
 	change->cb.nb_node = dnode->schema->priv;
 	yang_dnode_get_path(dnode, change->cb.xpath, sizeof(change->cb.xpath));
 	change->cb.dnode = dnode;
@@ -373,7 +375,7 @@ static void nb_config_diff_del_changes(struct nb_config_cbs *changes)
  * configurations. Given a new subtree, calculate all new YANG data nodes,
  * excluding default leafs and leaf-lists. This is a recursive function.
  */
-static void nb_config_diff_created(const struct lyd_node *dnode,
+static void nb_config_diff_created(const struct lyd_node *dnode, uint32_t *seq,
 				   struct nb_config_cbs *changes)
 {
 	enum nb_operation operation;
@@ -392,16 +394,17 @@ static void nb_config_diff_created(const struct lyd_node *dnode,
 		else
 			return;
 
-		nb_config_diff_add_change(changes, operation, dnode);
+		nb_config_diff_add_change(changes, operation, seq, dnode);
 		break;
 	case LYS_CONTAINER:
 	case LYS_LIST:
 		if (nb_operation_is_valid(NB_OP_CREATE, dnode->schema))
-			nb_config_diff_add_change(changes, NB_OP_CREATE, dnode);
+			nb_config_diff_add_change(changes, NB_OP_CREATE, seq,
+						  dnode);
 
 		/* Process child nodes recursively. */
 		LY_TREE_FOR (dnode->child, child) {
-			nb_config_diff_created(child, changes);
+			nb_config_diff_created(child, seq, changes);
 		}
 		break;
 	default:
@@ -409,11 +412,11 @@ static void nb_config_diff_created(const struct lyd_node *dnode,
 	}
 }
 
-static void nb_config_diff_deleted(const struct lyd_node *dnode,
+static void nb_config_diff_deleted(const struct lyd_node *dnode, uint32_t *seq,
 				   struct nb_config_cbs *changes)
 {
 	if (nb_operation_is_valid(NB_OP_DESTROY, dnode->schema))
-		nb_config_diff_add_change(changes, NB_OP_DESTROY, dnode);
+		nb_config_diff_add_change(changes, NB_OP_DESTROY, seq, dnode);
 	else if (CHECK_FLAG(dnode->schema->nodetype, LYS_CONTAINER)) {
 		struct lyd_node *child;
 
@@ -424,7 +427,7 @@ static void nb_config_diff_deleted(const struct lyd_node *dnode,
 		 * when applicable (i.e. optional nodes).
 		 */
 		LY_TREE_FOR (dnode->child, child) {
-			nb_config_diff_deleted(child, changes);
+			nb_config_diff_deleted(child, seq, changes);
 		}
 	}
 }
@@ -435,6 +438,7 @@ static void nb_config_diff(const struct nb_config *config1,
 			   struct nb_config_cbs *changes)
 {
 	struct lyd_difflist *diff;
+	uint32_t seq = 0;
 
 	diff = lyd_diff(config1->dnode, config2->dnode,
 			LYD_DIFFOPT_WITHDEFAULTS);
@@ -449,15 +453,16 @@ static void nb_config_diff(const struct nb_config *config1,
 		switch (type) {
 		case LYD_DIFF_CREATED:
 			dnode = diff->second[i];
-			nb_config_diff_created(dnode, changes);
+			nb_config_diff_created(dnode, &seq, changes);
 			break;
 		case LYD_DIFF_DELETED:
 			dnode = diff->first[i];
-			nb_config_diff_deleted(dnode, changes);
+			nb_config_diff_deleted(dnode, &seq, changes);
 			break;
 		case LYD_DIFF_CHANGED:
 			dnode = diff->second[i];
-			nb_config_diff_add_change(changes, NB_OP_MODIFY, dnode);
+			nb_config_diff_add_change(changes, NB_OP_MODIFY, &seq,
+						  dnode);
 			break;
 		case LYD_DIFF_MOVEDAFTER1:
 		case LYD_DIFF_MOVEDAFTER2:
@@ -854,8 +859,8 @@ static int nb_callback_configuration(const enum nb_event event,
 			break;
 		default:
 			flog_err(EC_LIB_DEVELOPMENT,
-				 "%s: unknown event (%u) [xpath %s]",
-				 __func__, event, xpath);
+				 "%s: unknown event (%u) [xpath %s]", __func__,
+				 event, xpath);
 			exit(1);
 		}
 
