@@ -59,6 +59,9 @@ struct yang_module {
 #ifdef HAVE_CONFD
 	int confd_hash;
 #endif
+#ifdef HAVE_SYSREPO
+	sr_subscription_ctx_t *sr_subscription;
+#endif
 };
 RB_HEAD(yang_modules, yang_module);
 RB_PROTOTYPE(yang_modules, yang_module, entry, yang_module_compare);
