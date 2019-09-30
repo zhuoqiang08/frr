@@ -1389,6 +1389,8 @@ const struct frr_yang_module_info frr_route_map_info = {
 			.cbs = {
 				.create = lib_route_map_entry_create,
 				.destroy = lib_route_map_entry_destroy,
+				.cli_show = route_map_instance_show,
+				.cli_show_end = route_map_instance_show_end,
 			}
 		},
 		{
@@ -1396,6 +1398,7 @@ const struct frr_yang_module_info frr_route_map_info = {
 			.cbs = {
 				.modify = lib_route_map_entry_description_modify,
 				.destroy = lib_route_map_entry_description_destroy,
+				.cli_show = route_map_description_show,
 			}
 		},
 		{
@@ -1409,12 +1412,14 @@ const struct frr_yang_module_info frr_route_map_info = {
 			.cbs = {
 				.modify = lib_route_map_entry_call_modify,
 				.destroy = lib_route_map_entry_call_destroy,
+				.cli_show = route_map_call_show,
 			}
 		},
 		{
 			.xpath = "/frr-route-map:lib/route-map/entry/exit-policy",
 			.cbs = {
 				.modify = lib_route_map_entry_exit_policy_modify,
+				.cli_show = route_map_exit_policy_show,
 			}
 		},
 		{
@@ -1429,6 +1434,7 @@ const struct frr_yang_module_info frr_route_map_info = {
 			.cbs = {
 				.create = lib_route_map_entry_match_condition_create,
 				.destroy = lib_route_map_entry_match_condition_destroy,
+				.cli_show = route_map_condition_show,
 			}
 		},
 		{
@@ -1492,6 +1498,7 @@ const struct frr_yang_module_info frr_route_map_info = {
 			.cbs = {
 				.create = lib_route_map_entry_set_action_create,
 				.destroy = lib_route_map_entry_set_action_destroy,
+				.cli_show = route_map_action_show,
 			}
 		},
 		{
