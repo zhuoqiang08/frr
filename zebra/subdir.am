@@ -67,6 +67,7 @@ zebra_zebra_SOURCES = \
 	zebra/rule_socket.c \
 	zebra/zebra_mlag.c \
 	zebra/zebra_l2.c \
+	zebra/zebra_northbound.c \
 	zebra/zebra_memory.c \
 	zebra/zebra_dplane.c \
 	zebra/zebra_mpls.c \
@@ -179,3 +180,8 @@ if DEV_BUILD
 zebra_zebra_fpm_la_SOURCES += zebra/zebra_fpm_dt.c
 endif
 endif
+
+nodist_zebra_zebra_SOURCES = \
+	yang/frr-nexthop.yang.c \
+	yang/frr-zebra.yang.c \
+	# end
