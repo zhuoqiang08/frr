@@ -645,6 +645,23 @@ extern struct route_map_index *route_map_index_get(struct route_map *map,
 extern void route_map_index_delete(struct route_map_index *index, int notify);
 
 /* routemap_cli.c */
+typedef int (*routemap_match_hook_fun)(struct vty *vty,
+				       struct route_map_index *rmi,
+				       const char *command, const char *arg,
+				       route_map_event_t event);
+
+typedef int (*routemap_set_hook_fun)(struct vty *vty,
+				     struct route_map_index *rmi,
+				     const char *command, const char *arg);
+
+struct routemap_hook_context {
+	struct route_map_index *rhc_rmi;
+	const char *rhc_rule;
+	route_map_event_t rhc_event;
+	routemap_set_hook_fun rhc_shook;
+	routemap_match_hook_fun rhc_mhook;
+};
+
 extern void route_map_instance_show(struct vty *vty, struct lyd_node *dnode,
 				    bool show_defaults);
 extern void route_map_instance_show_end(struct vty *vty,
@@ -662,6 +679,11 @@ extern void route_map_description_show(struct vty *vty,
 				       bool show_defaults);
 extern void route_map_cli_init(void);
 
+/* routemap_northbound.c */
+int lib_route_map_entry_match_destroy(enum nb_event event,
+				      const struct lyd_node *dnode);
+int lib_route_map_entry_set_destroy(enum nb_event event,
+				    const struct lyd_node *dnode);
 extern const struct frr_yang_module_info frr_route_map_info;
 
 #ifdef __cplusplus

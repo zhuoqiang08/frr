@@ -28,6 +28,53 @@
 #include "lib/routemap.h"
 
 /*
+ * Auxiliary functions to avoid code duplication:
+ *
+ * lib_route_map_entry_set_destroy: unset `set` commands.
+ * lib_route_map_entry_match_destroy: unset `match` commands.
+ */
+int lib_route_map_entry_match_destroy(enum nb_event event,
+				      const struct lyd_node *dnode)
+{
+	struct routemap_hook_context *rhc;
+	int rv;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	rhc = nb_running_get_entry(dnode, NULL, true);
+	if (rhc->rhc_mhook == NULL)
+		return NB_OK;
+
+	rv = rhc->rhc_mhook(NULL, rhc->rhc_rmi, rhc->rhc_rule, NULL,
+			    rhc->rhc_event);
+	if (rv != CMD_SUCCESS)
+		return NB_ERR_INCONSISTENCY;
+
+	return NB_OK;
+}
+
+int lib_route_map_entry_set_destroy(enum nb_event event,
+				    const struct lyd_node *dnode)
+{
+	struct routemap_hook_context *rhc;
+	int rv;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	rhc = nb_running_get_entry(dnode, NULL, true);
+	if (rhc->rhc_shook == NULL)
+		return NB_OK;
+
+	rv = rhc->rhc_shook(NULL, rhc->rhc_rmi, rhc->rhc_rule, NULL);
+	if (rv != CMD_SUCCESS)
+		return NB_ERR_INCONSISTENCY;
+
+	return NB_OK;
+}
+
+/*
  * XPath: /frr-route-map:lib/route-map
  */
 static int lib_route_map_create(enum nb_event event,
@@ -388,6 +435,25 @@ lib_route_map_entry_match_condition_create(enum nb_event event,
 					   const struct lyd_node *dnode,
 					   union nb_resource *resource)
 {
+	struct routemap_hook_context *rhc;
+
+	switch (event) {
+	case NB_EV_VALIDATE:
+		/* NOTHING */
+		break;
+	case NB_EV_PREPARE:
+		resource->ptr = XCALLOC(MTYPE_TMP, sizeof(*rhc));
+		break;
+	case NB_EV_ABORT:
+		XFREE(MTYPE_TMP, resource->ptr);
+		break;
+	case NB_EV_APPLY:
+		rhc = resource->ptr;
+		rhc->rhc_rmi = nb_running_get_entry(dnode, NULL, true);
+		nb_running_set_entry(dnode, rhc);
+		break;
+	}
+
 	return NB_OK;
 }
 
@@ -395,100 +461,17 @@ static int
 lib_route_map_entry_match_condition_destroy(enum nb_event event,
 					    const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int condition, rv;
+	struct routemap_hook_context *rhc;
+	int rv;
 
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	rv = CMD_SUCCESS;
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	condition = yang_dnode_get_enum(dnode, "condition");
-	switch (condition) {
-	case 0: /* interface */
-		if (rmap_match_set_hook.no_match_interface == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_interface(
-			NULL, rmi, "interface", NULL, RMAP_EVENT_MATCH_DELETED);
-		break;
-	case 1: /* ipv4-address-list */
-		if (rmap_match_set_hook.no_match_ip_address == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_address(
-			NULL, rmi, "ip address", NULL,
-			RMAP_EVENT_FILTER_DELETED);
-		break;
-	case 2: /* ipv4-prefix-list */
-		if (rmap_match_set_hook.no_match_ip_address_prefix_list == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_address_prefix_list(
-			NULL, rmi, "ip address prefix-list", NULL,
-			RMAP_EVENT_PLIST_DELETED);
-		break;
-	case 3: /* ipv4-next-hop-list */
-		if (rmap_match_set_hook.no_match_ip_next_hop == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_next_hop(
-			NULL, rmi, "ip next-hop", NULL,
-			RMAP_EVENT_FILTER_DELETED);
-		break;
-	case 4: /* ipv4-next-hop-prefix-list */
-		if (rmap_match_set_hook.no_match_ip_next_hop_prefix_list
-		    == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_next_hop_prefix_list(
-			NULL, rmi, "ip next-hop prefix-list", NULL,
-			RMAP_EVENT_PLIST_DELETED);
-		break;
-	case 5: /* ipv4-next-hop-type */
-		if (rmap_match_set_hook.no_match_ip_next_hop_type == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_next_hop_type(
-			NULL, rmi, "ip next-hop type", NULL,
-			RMAP_EVENT_MATCH_DELETED);
-		break;
-	case 6: /* ipv6-address-list */
-		if (rmap_match_set_hook.no_match_ipv6_address == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ipv6_address(
-			NULL, rmi, "ipv6 address", NULL,
-			RMAP_EVENT_FILTER_DELETED);
-		break;
-	case 7: /* ipv6-prefix-list */
-		if (rmap_match_set_hook.no_match_ipv6_address_prefix_list
-		    == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ipv6_address_prefix_list(
-			NULL, rmi, "ipv6 address prefix-list", NULL,
-			RMAP_EVENT_PLIST_DELETED);
-		break;
-	case 8: /* ipv6-next-hop-type */
-		if (rmap_match_set_hook.no_match_ipv6_next_hop_type == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ipv6_next_hop_type(
-			NULL, rmi, "ipv6 next-hop type", NULL,
-			RMAP_EVENT_MATCH_DELETED);
-		break;
-	case 9: /* metric */
-		if (rmap_match_set_hook.no_match_metric == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_metric(
-			NULL, rmi, "metric", NULL, RMAP_EVENT_MATCH_DELETED);
-		break;
-	case 10: /* tag */
-		if (rmap_match_set_hook.no_match_tag == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_tag(NULL, rmi, "tag", NULL,
-						      RMAP_EVENT_MATCH_DELETED);
-		break;
-	case 100:
-		/* NOTHING: custom field, should be handled by daemon. */
-		break;
-	}
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
+	rv = lib_route_map_entry_match_destroy(event, dnode);
+	rhc = nb_running_unset_entry(dnode);
+	XFREE(MTYPE_TMP, rhc);
 
-	return NB_OK;
+	return rv;
 }
 
 /*
@@ -498,7 +481,7 @@ static int lib_route_map_entry_match_condition_interface_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *ifname;
 	int rv;
 
@@ -509,12 +492,22 @@ static int lib_route_map_entry_match_condition_interface_modify(
 	if (rmap_match_set_hook.match_interface == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	ifname = yang_dnode_get_string(dnode, NULL);
-	rv = rmap_match_set_hook.match_interface(NULL, rmi, "interface", ifname,
+
+	/* Set destroy information. */
+	rhc->rhc_mhook = rmap_match_set_hook.no_match_interface;
+	rhc->rhc_rule = "interface";
+	rhc->rhc_event = RMAP_EVENT_MATCH_DELETED;
+
+	rv = rmap_match_set_hook.match_interface(NULL, rhc->rhc_rmi,
+						 "interface", ifname,
 						 RMAP_EVENT_MATCH_ADDED);
-	if (rv != CMD_SUCCESS)
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -522,23 +515,7 @@ static int lib_route_map_entry_match_condition_interface_modify(
 static int lib_route_map_entry_match_condition_interface_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_match_interface == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_match_interface(
-		NULL, rmi, "interface", NULL, RMAP_EVENT_MATCH_DELETED);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -548,7 +525,7 @@ static int lib_route_map_entry_match_condition_access_list_num_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *acl;
 	int condition, rv;
 
@@ -558,24 +535,34 @@ static int lib_route_map_entry_match_condition_access_list_num_modify(
 	/* Check for hook function. */
 	rv = CMD_SUCCESS;
 	acl = yang_dnode_get_string(dnode, NULL);
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	condition = yang_dnode_get_enum(dnode, "../condition");
 	switch (condition) {
 	case 1: /* ipv4-address-list */
-		if (rmap_match_set_hook.match_ip_next_hop == NULL)
-			break;
-		rv = rmap_match_set_hook.match_ip_address(
-			NULL, rmi, "ip address", acl, RMAP_EVENT_FILTER_ADDED);
-		break;
-	case 3: /* ipv4-next-hop-list */
 		if (rmap_match_set_hook.match_ip_address == NULL)
 			break;
+		rhc->rhc_mhook = rmap_match_set_hook.no_match_ip_address;
+		rhc->rhc_rule = "ip address";
+		rhc->rhc_event = RMAP_EVENT_FILTER_DELETED;
+		rv = rmap_match_set_hook.match_ip_address(
+			NULL, rhc->rhc_rmi, "ip address", acl,
+			RMAP_EVENT_FILTER_ADDED);
+		break;
+	case 3: /* ipv4-next-hop-list */
+		if (rmap_match_set_hook.match_ip_next_hop == NULL)
+			break;
+		rhc->rhc_mhook = rmap_match_set_hook.no_match_ip_next_hop;
+		rhc->rhc_rule = "ip next-hop";
+		rhc->rhc_event = RMAP_EVENT_FILTER_DELETED;
 		rv = rmap_match_set_hook.match_ip_next_hop(
-			NULL, rmi, "ip next-hop", acl, RMAP_EVENT_FILTER_ADDED);
+			NULL, rhc->rhc_rmi, "ip next-hop", acl,
+			RMAP_EVENT_FILTER_ADDED);
 		break;
 	}
-	if (rv != CMD_SUCCESS)
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -583,23 +570,7 @@ static int lib_route_map_entry_match_condition_access_list_num_modify(
 static int lib_route_map_entry_match_condition_access_list_num_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_match_ip_address == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_match_ip_address(
-		NULL, rmi, "ip address", NULL, RMAP_EVENT_FILTER_DELETED);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -628,7 +599,7 @@ static int lib_route_map_entry_match_condition_list_name_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *acl;
 	int condition;
 	int rv;
@@ -638,55 +609,80 @@ static int lib_route_map_entry_match_condition_list_name_modify(
 
 	/* Check for hook installation, otherwise we can just stop. */
 	acl = yang_dnode_get_string(dnode, NULL);
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	condition = yang_dnode_get_enum(dnode, "../condition");
 	switch (condition) {
 	case 1: /* ipv4-address-list */
 		if (rmap_match_set_hook.match_ip_address == NULL)
 			return NB_OK;
+		rhc->rhc_mhook = rmap_match_set_hook.no_match_ip_address;
+		rhc->rhc_rule = "ip address";
+		rhc->rhc_event = RMAP_EVENT_FILTER_DELETED;
 		rv = rmap_match_set_hook.match_ip_address(
-			NULL, rmi, "ip address", acl, RMAP_EVENT_FILTER_ADDED);
+			NULL, rhc->rhc_rmi, "ip address", acl,
+			RMAP_EVENT_FILTER_ADDED);
 		break;
 	case 2: /* ipv4-prefix-list */
 		if (rmap_match_set_hook.match_ip_address_prefix_list == NULL)
 			return NB_OK;
+		rhc->rhc_mhook =
+			rmap_match_set_hook.no_match_ip_address_prefix_list;
+		rhc->rhc_rule = "ip address prefix-list";
+		rhc->rhc_event = RMAP_EVENT_PLIST_DELETED;
 		rv = rmap_match_set_hook.match_ip_address_prefix_list(
-			NULL, rmi, "ip address prefix-list", acl,
+			NULL, rhc->rhc_rmi, "ip address prefix-list", acl,
 			RMAP_EVENT_PLIST_ADDED);
 		break;
 	case 3: /* ipv4-next-hop-list */
 		if (rmap_match_set_hook.match_ip_next_hop == NULL)
 			return NB_OK;
+		rhc->rhc_mhook = rmap_match_set_hook.no_match_ip_next_hop;
+		rhc->rhc_rule = "ip next-hop";
+		rhc->rhc_event = RMAP_EVENT_FILTER_DELETED;
 		rv = rmap_match_set_hook.match_ip_next_hop(
-			NULL, rmi, "ip next-hop", acl, RMAP_EVENT_FILTER_ADDED);
+			NULL, rhc->rhc_rmi, "ip next-hop", acl,
+			RMAP_EVENT_FILTER_ADDED);
 		break;
 	case 4: /* ipv4-next-hop-prefix-list */
 		if (rmap_match_set_hook.match_ip_next_hop_prefix_list == NULL)
 			return NB_OK;
+		rhc->rhc_mhook =
+			rmap_match_set_hook.no_match_ip_next_hop_prefix_list;
+		rhc->rhc_rule = "ip next-hop prefix-list";
+		rhc->rhc_event = RMAP_EVENT_PLIST_DELETED;
 		rv = rmap_match_set_hook.match_ip_next_hop_prefix_list(
-			NULL, rmi, "ip next-hop prefix-list", acl,
+			NULL, rhc->rhc_rmi, "ip next-hop prefix-list", acl,
 			RMAP_EVENT_PLIST_ADDED);
 		break;
 	case 6: /* ipv6-address-list */
 		if (rmap_match_set_hook.match_ipv6_address == NULL)
 			return NB_OK;
+		rhc->rhc_mhook = rmap_match_set_hook.no_match_ipv6_address;
+		rhc->rhc_rule = "ipv6 address";
+		rhc->rhc_event = RMAP_EVENT_FILTER_DELETED;
 		rv = rmap_match_set_hook.match_ipv6_address(
-			NULL, rmi, "ipv6 address", acl,
+			NULL, rhc->rhc_rmi, "ipv6 address", acl,
 			RMAP_EVENT_FILTER_ADDED);
 		break;
 	case 7: /* ipv6-prefix-list */
 		if (rmap_match_set_hook.match_ipv6_address_prefix_list == NULL)
 			return NB_OK;
+		rhc->rhc_mhook =
+			rmap_match_set_hook.no_match_ipv6_address_prefix_list;
+		rhc->rhc_rule = "ipv6 address prefix-list";
+		rhc->rhc_event = RMAP_EVENT_PLIST_DELETED;
 		rv = rmap_match_set_hook.match_ipv6_address_prefix_list(
-			NULL, rmi, "ipv6 address prefix-list", acl,
+			NULL, rhc->rhc_rmi, "ipv6 address prefix-list", acl,
 			RMAP_EVENT_PLIST_ADDED);
 		break;
 	default:
 		rv = CMD_ERR_NO_MATCH;
 		break;
 	}
-	if (rv != CMD_SUCCESS)
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -694,70 +690,7 @@ static int lib_route_map_entry_match_condition_list_name_modify(
 static int lib_route_map_entry_match_condition_list_name_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int condition;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook installation, otherwise we can just stop. */
-	rv = CMD_SUCCESS;
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	condition = yang_dnode_get_enum(dnode, "../condition");
-	switch (condition) {
-	case 1: /* ipv4-address-list */
-		if (rmap_match_set_hook.no_match_ip_address == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_address(
-			NULL, rmi, "ip address", NULL,
-			RMAP_EVENT_FILTER_DELETED);
-		break;
-	case 2: /* ipv4-prefix-list */
-		if (rmap_match_set_hook.no_match_ip_address_prefix_list == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_address_prefix_list(
-			NULL, rmi, "ip address prefix-list", NULL,
-			RMAP_EVENT_PLIST_DELETED);
-		break;
-	case 3: /* ipv4-next-hop-list */
-		if (rmap_match_set_hook.no_match_ip_next_hop == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_next_hop(
-			NULL, rmi, "ip next-hop", NULL,
-			RMAP_EVENT_FILTER_DELETED);
-		break;
-	case 4: /* ipv4-next-hop-prefix-list */
-		if (rmap_match_set_hook.no_match_ip_next_hop_prefix_list
-		    == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ip_next_hop_prefix_list(
-			NULL, rmi, "ip next-hop prefix-list", NULL,
-			RMAP_EVENT_PLIST_DELETED);
-		break;
-	case 6: /* ipv6-address-list */
-		if (rmap_match_set_hook.no_match_ipv6_address == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ipv6_address(
-			NULL, rmi, "ipv6 address", NULL,
-			RMAP_EVENT_FILTER_DELETED);
-		break;
-	case 7: /* ipv6-prefix-list */
-		if (rmap_match_set_hook.no_match_ipv6_address_prefix_list
-		    == NULL)
-			break;
-		rv = rmap_match_set_hook.no_match_ipv6_address_prefix_list(
-			NULL, rmi, "ipv6 address prefix-list", NULL,
-			RMAP_EVENT_PLIST_DELETED);
-		break;
-	default:
-		rv = CMD_ERR_NO_MATCH;
-		break;
-	}
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -767,7 +700,7 @@ static int lib_route_map_entry_match_condition_ipv4_next_hop_type_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *type;
 	int rv;
 
@@ -778,12 +711,22 @@ static int lib_route_map_entry_match_condition_ipv4_next_hop_type_modify(
 	if (rmap_match_set_hook.match_ip_next_hop_type == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	type = yang_dnode_get_string(dnode, NULL);
+
+	/* Set destroy information. */
+	rhc->rhc_mhook = rmap_match_set_hook.no_match_ip_next_hop_type;
+	rhc->rhc_rule = "ip next-hop type";
+	rhc->rhc_event = RMAP_EVENT_MATCH_DELETED;
+
 	rv = rmap_match_set_hook.match_ip_next_hop_type(
-		NULL, rmi, "ip next-hop type", type, RMAP_EVENT_MATCH_ADDED);
-	if (rv != CMD_SUCCESS)
+		NULL, rhc->rhc_rmi, "ip next-hop type", type,
+		RMAP_EVENT_MATCH_ADDED);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -791,23 +734,7 @@ static int lib_route_map_entry_match_condition_ipv4_next_hop_type_modify(
 static int lib_route_map_entry_match_condition_ipv4_next_hop_type_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_match_ip_next_hop_type == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_match_ip_address(
-		NULL, rmi, "ip next-hop type", NULL, RMAP_EVENT_MATCH_DELETED);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -817,7 +744,7 @@ static int lib_route_map_entry_match_condition_ipv6_next_hop_type_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *type;
 	int rv;
 
@@ -828,12 +755,22 @@ static int lib_route_map_entry_match_condition_ipv6_next_hop_type_modify(
 	if (rmap_match_set_hook.match_ipv6_next_hop_type == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	type = yang_dnode_get_string(dnode, NULL);
+
+	/* Set destroy information. */
+	rhc->rhc_mhook = rmap_match_set_hook.no_match_ipv6_next_hop_type;
+	rhc->rhc_rule = "ipv6 next-hop type";
+	rhc->rhc_event = RMAP_EVENT_MATCH_DELETED;
+
 	rv = rmap_match_set_hook.match_ipv6_next_hop_type(
-		NULL, rmi, "ipv6 next-hop type", type, RMAP_EVENT_MATCH_ADDED);
-	if (rv != CMD_SUCCESS)
+		NULL, rhc->rhc_rmi, "ipv6 next-hop type", type,
+		RMAP_EVENT_MATCH_ADDED);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -841,24 +778,7 @@ static int lib_route_map_entry_match_condition_ipv6_next_hop_type_modify(
 static int lib_route_map_entry_match_condition_ipv6_next_hop_type_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_match_ipv6_next_hop_type == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_match_ipv6_next_hop_type(
-		NULL, rmi, "ipv6 next-hop type", NULL,
-		RMAP_EVENT_MATCH_DELETED);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -869,7 +789,7 @@ lib_route_map_entry_match_condition_metric_modify(enum nb_event event,
 						  const struct lyd_node *dnode,
 						  union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *type;
 	int rv;
 
@@ -880,12 +800,21 @@ lib_route_map_entry_match_condition_metric_modify(enum nb_event event,
 	if (rmap_match_set_hook.match_metric == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	type = yang_dnode_get_string(dnode, NULL);
-	rv = rmap_match_set_hook.match_metric(NULL, rmi, "metric", type,
-					      RMAP_EVENT_MATCH_ADDED);
-	if (rv != CMD_SUCCESS)
+
+	/* Set destroy information. */
+	rhc->rhc_mhook = rmap_match_set_hook.no_match_metric;
+	rhc->rhc_rule = "metric";
+	rhc->rhc_event = RMAP_EVENT_MATCH_DELETED;
+
+	rv = rmap_match_set_hook.match_metric(NULL, rhc->rhc_rmi, "metric",
+					      type, RMAP_EVENT_MATCH_ADDED);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -894,23 +823,7 @@ static int
 lib_route_map_entry_match_condition_metric_destroy(enum nb_event event,
 						   const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_match_metric == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_match_metric(NULL, rmi, "metric", NULL,
-						 RMAP_EVENT_MATCH_DELETED);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -921,8 +834,8 @@ lib_route_map_entry_match_condition_tag_modify(enum nb_event event,
 					       const struct lyd_node *dnode,
 					       union nb_resource *resource)
 {
-	struct route_map_index *rmi;
-	const char *type;
+	struct routemap_hook_context *rhc;
+	const char *tag;
 	int rv;
 
 	if (event != NB_EV_APPLY)
@@ -932,12 +845,21 @@ lib_route_map_entry_match_condition_tag_modify(enum nb_event event,
 	if (rmap_match_set_hook.match_tag == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	type = yang_dnode_get_string(dnode, NULL);
-	rv = rmap_match_set_hook.match_tag(NULL, rmi, "tag", type,
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
+	tag = yang_dnode_get_string(dnode, NULL);
+
+	/* Set destroy information. */
+	rhc->rhc_mhook = rmap_match_set_hook.no_match_tag;
+	rhc->rhc_rule = "tag";
+	rhc->rhc_event = RMAP_EVENT_MATCH_DELETED;
+
+	rv = rmap_match_set_hook.match_tag(NULL, rhc->rhc_rmi, "tag", tag,
 					   RMAP_EVENT_MATCH_ADDED);
-	if (rv != CMD_SUCCESS)
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_mhook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -946,23 +868,7 @@ static int
 lib_route_map_entry_match_condition_tag_destroy(enum nb_event event,
 						const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_match_tag == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_match_tag(NULL, rmi, "tag", NULL,
-					      RMAP_EVENT_MATCH_DELETED);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_match_destroy(event, dnode);
 }
 
 /*
@@ -972,53 +878,24 @@ static int lib_route_map_entry_set_action_create(enum nb_event event,
 						 const struct lyd_node *dnode,
 						 union nb_resource *resource)
 {
-	return NB_OK;
+	return lib_route_map_entry_match_condition_create(event, dnode,
+							  resource);
 }
 
 static int lib_route_map_entry_set_action_destroy(enum nb_event event,
 						  const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int action, rv;
+	struct routemap_hook_context *rhc;
+	int rv;
 
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	rv = NB_OK;
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	action = yang_dnode_get_enum(dnode, "./action");
-	switch (action) {
-	case 0: /* ipv4-next-hop */
-		if (rmap_match_set_hook.no_set_ip_nexthop == NULL)
-			break;
-		rv = rmap_match_set_hook.no_set_ip_nexthop(NULL, rmi,
-							   "ip next-hop", NULL);
-		break;
-	case 1: /* ipv6-next-hop */
-		if (rmap_match_set_hook.no_set_ipv6_nexthop_local == NULL)
-			break;
-		rv = rmap_match_set_hook.no_set_ipv6_nexthop_local(
-			NULL, rmi, "ipv6 next-hop local", NULL);
-		break;
-	case 2: /* metric */
-		if (rmap_match_set_hook.no_set_metric == NULL)
-			break;
-		rv = rmap_match_set_hook.no_set_metric(NULL, rmi, "metric",
-						       NULL);
-		break;
-	case 3: /* tag */
-		if (rmap_match_set_hook.no_set_tag == NULL)
-			break;
-		rv = rmap_match_set_hook.no_set_tag(NULL, rmi, "tag", NULL);
-		break;
-	case 100:
-		/* NOTHING: custom field, should be handled by daemon. */
-		break;
-	}
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
+	rv = lib_route_map_entry_set_destroy(event, dnode);
+	rhc = nb_running_unset_entry(dnode);
+	XFREE(MTYPE_TMP, rhc);
 
-	return NB_OK;
+	return rv;
 }
 
 /*
@@ -1029,7 +906,7 @@ lib_route_map_entry_set_action_ipv4_address_modify(enum nb_event event,
 						   const struct lyd_node *dnode,
 						   union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *address;
 	struct in_addr ia;
 	int rv;
@@ -1056,12 +933,20 @@ lib_route_map_entry_set_action_ipv4_address_modify(enum nb_event event,
 	if (rmap_match_set_hook.set_ip_nexthop == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	address = yang_dnode_get_string(dnode, NULL);
-	rv = rmap_match_set_hook.set_ip_nexthop(NULL, rmi, "ip next-hop",
-						address);
-	if (rv != CMD_SUCCESS)
+
+	/* Set destroy information. */
+	rhc->rhc_shook = rmap_match_set_hook.no_set_ip_nexthop;
+	rhc->rhc_rule = "ip next-hop";
+
+	rv = rmap_match_set_hook.set_ip_nexthop(NULL, rhc->rhc_rmi,
+						"ip next-hop", address);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_shook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -1069,28 +954,7 @@ lib_route_map_entry_set_action_ipv4_address_modify(enum nb_event event,
 static int lib_route_map_entry_set_action_ipv4_address_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	/*
-	 * NOTE: validate if 'action' is 'ipv4-next-hop',
-	 * currently it is not necessary because this is the
-	 * only implemented action.
-	 */
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_set_ip_nexthop == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_set_ip_nexthop(NULL, rmi, "ip next-hop",
-						   NULL);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_set_destroy(event, dnode);
 }
 
 /*
@@ -1101,7 +965,7 @@ lib_route_map_entry_set_action_ipv6_address_modify(enum nb_event event,
 						   const struct lyd_node *dnode,
 						   union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *address;
 	struct in6_addr i6a;
 	int rv;
@@ -1129,12 +993,20 @@ lib_route_map_entry_set_action_ipv6_address_modify(enum nb_event event,
 	if (rmap_match_set_hook.set_ipv6_nexthop_local == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	address = yang_dnode_get_string(dnode, NULL);
+
+	/* Set destroy information. */
+	rhc->rhc_shook = rmap_match_set_hook.no_set_ipv6_nexthop_local;
+	rhc->rhc_rule = "ipv6 next-hop local";
+
 	rv = rmap_match_set_hook.set_ipv6_nexthop_local(
-		NULL, rmi, "ipv6 next-hop local", address);
-	if (rv != CMD_SUCCESS)
+		NULL, rhc->rhc_rmi, "ipv6 next-hop local", address);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_shook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -1142,29 +1014,7 @@ lib_route_map_entry_set_action_ipv6_address_modify(enum nb_event event,
 static int lib_route_map_entry_set_action_ipv6_address_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	/*
-	 * NOTE: validate if 'action' is 'ipv6-next-hop',
-	 * currently it is not necessary because this is the
-	 * only implemented action. Other actions might have
-	 * different validations.
-	 */
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/* Check for hook function. */
-	if (rmap_match_set_hook.no_set_ipv6_nexthop_local == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_set_ipv6_nexthop_local(
-		NULL, rmi, "ipv6 next-hop local", NULL);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_set_destroy(event, dnode);
 }
 
 /*
@@ -1173,7 +1023,7 @@ static int lib_route_map_entry_set_action_ipv6_address_destroy(
 static int set_action_modify(enum nb_event event, const struct lyd_node *dnode,
 			     union nb_resource *resource, const char *value)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	int rv;
 
 	/*
@@ -1188,10 +1038,19 @@ static int set_action_modify(enum nb_event event, const struct lyd_node *dnode,
 	if (rmap_match_set_hook.set_metric == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.set_metric(NULL, rmi, "metric", value);
-	if (rv != CMD_SUCCESS)
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
+
+	/* Set destroy information. */
+	rhc->rhc_shook = rmap_match_set_hook.no_set_metric;
+	rhc->rhc_rule = "metric";
+
+	rv = rmap_match_set_hook.set_metric(NULL, rhc->rhc_rmi, "metric",
+					    value);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_shook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -1210,29 +1069,7 @@ static int
 lib_route_map_entry_set_action_value_destroy(enum nb_event event,
 					     const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	/*
-	 * NOTE: validate if 'action' is 'metric', currently it is not
-	 * necessary because this is the only implemented action. Other
-	 * actions might have different validations.
-	 */
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	/*
-	 * Check for hook function.
-	 */
-	if (rmap_match_set_hook.no_set_metric == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_set_metric(NULL, rmi, "metric", NULL);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_set_destroy(event, dnode);
 }
 
 /*
@@ -1325,7 +1162,7 @@ lib_route_map_entry_set_action_tag_modify(enum nb_event event,
 					  const struct lyd_node *dnode,
 					  union nb_resource *resource)
 {
-	struct route_map_index *rmi;
+	struct routemap_hook_context *rhc;
 	const char *tag;
 	int rv;
 
@@ -1333,17 +1170,27 @@ lib_route_map_entry_set_action_tag_modify(enum nb_event event,
 	 * NOTE: validate if 'action' is 'tag', currently it is not
 	 * necessary because this is the only implemented action. Other
 	 * actions might have different validations.
-	 *
-	 * Check for hook function.
 	 */
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	/* Check for hook function. */
 	if (rmap_match_set_hook.set_tag == NULL)
 		return NB_OK;
 
-	rmi = nb_running_get_entry(dnode, NULL, true);
+	/* Add configuration. */
+	rhc = nb_running_get_entry(dnode, NULL, true);
 	tag = yang_dnode_get_string(dnode, NULL);
-	rv = rmap_match_set_hook.set_tag(NULL, rmi, "tag", tag);
-	if (rv != CMD_SUCCESS)
+
+	/* Set destroy information. */
+	rhc->rhc_shook = rmap_match_set_hook.no_set_tag;
+	rhc->rhc_rule = "tag";
+
+	rv = rmap_match_set_hook.set_tag(NULL, rhc->rhc_rmi, "tag", tag);
+	if (rv != CMD_SUCCESS) {
+		rhc->rhc_shook = NULL;
 		return NB_ERR_INCONSISTENCY;
+	}
 
 	return NB_OK;
 }
@@ -1352,25 +1199,7 @@ static int
 lib_route_map_entry_set_action_tag_destroy(enum nb_event event,
 					   const struct lyd_node *dnode)
 {
-	struct route_map_index *rmi;
-	int rv;
-
-	/*
-	 * NOTE: validate if 'action' is 'tag', currently it is not
-	 * necessary because this is the only implemented action. Other
-	 * actions might have different validations.
-	 *
-	 * Check for hook function.
-	 */
-	if (rmap_match_set_hook.no_set_tag == NULL)
-		return NB_OK;
-
-	rmi = nb_running_get_entry(dnode, NULL, true);
-	rv = rmap_match_set_hook.no_set_tag(NULL, rmi, "tag", NULL);
-	if (rv != CMD_SUCCESS)
-		return NB_ERR_INCONSISTENCY;
-
-	return NB_OK;
+	return lib_route_map_entry_set_destroy(event, dnode);
 }
 
 /* clang-format off */
