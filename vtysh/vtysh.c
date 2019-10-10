@@ -2448,6 +2448,28 @@ DEFUN (show_yang_operational_data,
 	return ret;
 }
 
+DEFUN (show_config_running,
+       show_config_running_cmd,
+       "show configuration running\
+          [<json|xml> [translate WORD]]\
+	  [with-defaults]" DAEMONS_LIST,
+       SHOW_STR
+       "Configuration information\n"
+       "Running configuration\n"
+       "Change output format to JSON\n"
+       "Change output format to XML\n"
+       "Translate output\n"
+       "YANG module translator\n"
+       "Show default values\n"
+       DAEMONS_STR)
+{
+	int idx_protocol = argc - 1;
+	char *fcmd = argv_concat(argv, argc - 1, 0);
+	int ret = vtysh_client_execute_name(argv[idx_protocol]->text, fcmd);
+	XFREE(MTYPE_TMP, fcmd);
+	return ret;
+}
+
 DEFUNSH(VTYSH_ALL, debug_nb,
 	debug_nb_cmd,
 	"[no] debug northbound\
@@ -4067,6 +4089,7 @@ void vtysh_init_vty(void)
 
 	/* northbound */
 	install_element(VIEW_NODE, &show_yang_operational_data_cmd);
+	install_element(VIEW_NODE, &show_config_running_cmd);
 	install_element(ENABLE_NODE, &debug_nb_cmd);
 	install_element(CONFIG_NODE, &debug_nb_cmd);
 
