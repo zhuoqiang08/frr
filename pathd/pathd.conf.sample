@@ -1,0 +1,15 @@
+! Default pathd configuration sample
+!
+password frr
+log stdout
+!
+te-path mpls input 500
+ nexthop 10.0.1.2 interface eth0 label 500
+ nexthop 10.0.1.3 interface eth0 label 500/600/700
+ nexthop 10.0.2.2 interface eth1 label 2000/3000
+!
+te-path mpls input 600
+ nexthop 10.0.1.2 interface eth0 label 2000/5000 preference 100
+ nexthop 10.0.1.3 interface eth0 label 3000/4000 preference 200
+ nexthop 10.0.2.2 interface eth1 label 2000/3000 preference 200
+!

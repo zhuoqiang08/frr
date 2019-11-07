@@ -1,0 +1,79 @@
+module frr-pathd {
+  yang-version 1.1;
+  namespace "http://frrouting.org/yang/pathd";
+  prefix frr-pathd;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import ietf-routing-types {
+    prefix rt-types;
+  }
+  import frr-interface {
+    prefix frr-interface;
+  }
+
+  organization
+    "Free Range Routing";
+  contact
+    "FRR Users List:       <mailto:frog@lists.frrouting.org>
+     FRR Development List: <mailto:dev@lists.frrouting.org>";
+  description
+    "This module defines a model for managing FRR pathd daemon.";
+
+  revision 2018-11-06 {
+    description
+      "Initial revision.";
+  }
+
+  container pathd {
+    container mpls {
+      list lsp {
+        key "input-label";
+        leaf input-label {
+          type rt-types:mpls-label;
+          description
+            "MPLS incoming label.";
+        }
+        list nhlfe {
+          key "nexthop";
+          leaf nexthop {
+            type inet:ip-address;
+            description
+              "The nexthop IP address.";
+          }
+          leaf interface {
+            type frr-interface:interface-ref;
+            mandatory true;
+            description
+              "The nexthop interface.";
+          }
+          container labels {
+            leaf-list label {
+              type rt-types:mpls-label;
+              ordered-by user;
+              min-elements 1;
+            }
+            description
+              "MPLS outgoing label(s).";
+          }
+          leaf preference {
+            type uint32;
+            default "100";
+            description
+              "Administrative preference.";
+          }
+          description
+            "MPLS NHLFE list.";
+        }
+        description
+          "MPLS LSP list.";
+      }
+      description
+        "MPLS paths configuration.";
+    }
+  }
+}
