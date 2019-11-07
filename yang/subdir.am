@@ -44,3 +44,7 @@ endif
 if ISISD
 dist_yangmodels_DATA += yang/frr-isisd.yang
 endif
+
+if PATHD
+dist_yangmodels_DATA += yang/frr-pathd.yang
+endif

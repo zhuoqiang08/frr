@@ -139,6 +139,7 @@ struct vtysh_client vtysh_client[] = {
 	{.fd = -1, .name = "staticd", .flag = VTYSH_STATICD, .next = NULL},
 	{.fd = -1, .name = "bfdd", .flag = VTYSH_BFDD, .next = NULL},
 	{.fd = -1, .name = "vrrpd", .flag = VTYSH_VRRPD, .next = NULL},
+	{.fd = -1, .name = "pathd", .flag = VTYSH_PATHD, .next = NULL},
 };
 
 /* Searches for client by name, returns index */
@@ -1199,6 +1200,10 @@ static struct cmd_node pw_node = {
 	PW_NODE, "%s(config-pw)# ",
 };
 
+static struct cmd_node te_path_node = {
+	TE_PATH_NODE, "%s(config-te-path)# ",
+};
+
 static struct cmd_node vrf_node = {
 	VRF_NODE, "%s(config-vrf)# ",
 };
@@ -1720,6 +1725,17 @@ DEFUNSH(VTYSH_FABRICD, router_openfabric, router_openfabric_cmd, "router openfab
 	return CMD_SUCCESS;
 }
 
+DEFUNSH(VTYSH_PATHD, te_path_mpls, te_path_mpls_cmd,
+	"te-path mpls input (16-1048575)",
+	"Establish a traffic-engineered path\n"
+	"Multiprotocol Label Switching LSP\n"
+	"Incoming MPLS label\n"
+	"MPLS label value\n")
+{
+	vty->node = TE_PATH_NODE;
+	return CMD_SUCCESS;
+}
+
 DEFUNSH(VTYSH_RMAP, vtysh_route_map, vtysh_route_map_cmd,
 	"route-map WORD <deny|permit> (1-65535)",
 	"Create route-map or enter route-map command mode\n"
@@ -1834,6 +1850,7 @@ static int vtysh_exit(struct vty *vty)
 	case LDP_L2VPN_NODE:
 	case ISIS_NODE:
 	case OPENFABRIC_NODE:
+	case TE_PATH_NODE:
 	case RMAP_NODE:
 	case PBRMAP_NODE:
 	case VTY_NODE:
@@ -2161,6 +2178,18 @@ DEFUNSH(VTYSH_ZEBRA, vtysh_pseudowire, vtysh_pseudowire_cmd,
 {
 	vty->node = PW_NODE;
 	return CMD_SUCCESS;
+}
+
+DEFUNSH(VTYSH_PATHD, vtysh_exit_pathd, vtysh_exit_pathd_cmd, "exit",
+	"Exit current mode and down to previous mode\n")
+{
+	return vtysh_exit(vty);
+}
+
+DEFUNSH(VTYSH_PATHD, vtysh_quit_pathd, vtysh_quit_pathd_cmd, "quit",
+	"Exit current mode and down to previous mode\n")
+{
+	return vtysh_exit_pathd(self, vty, argc, argv);
 }
 
 DEFUNSH(VTYSH_PBRD | VTYSH_SHARPD, vtysh_nexthop_group, vtysh_nexthop_group_cmd,
@@ -3715,6 +3744,7 @@ void vtysh_init_vty(void)
 	install_node(&rip_node, NULL);
 	install_node(&interface_node, NULL);
 	install_node(&pw_node, NULL);
+	install_node(&te_path_node, NULL);
 	install_node(&link_params_node, NULL);
 	install_node(&vrf_node, NULL);
 	install_node(&nh_group_node, NULL);
@@ -3852,6 +3882,8 @@ void vtysh_init_vty(void)
 	install_element(KEYCHAIN_NODE, &vtysh_quit_ripd_cmd);
 	install_element(KEYCHAIN_KEY_NODE, &vtysh_exit_ripd_cmd);
 	install_element(KEYCHAIN_KEY_NODE, &vtysh_quit_ripd_cmd);
+	install_element(TE_PATH_NODE, &vtysh_exit_pathd_cmd);
+	install_element(TE_PATH_NODE, &vtysh_quit_pathd_cmd);
 	install_element(RMAP_NODE, &vtysh_exit_rmap_cmd);
 	install_element(RMAP_NODE, &vtysh_quit_rmap_cmd);
 	install_element(PBRMAP_NODE, &vtysh_exit_pbr_map_cmd);
@@ -3911,6 +3943,7 @@ void vtysh_init_vty(void)
 	install_element(OPENFABRIC_NODE, &vtysh_end_all_cmd);
 	install_element(KEYCHAIN_NODE, &vtysh_end_all_cmd);
 	install_element(KEYCHAIN_KEY_NODE, &vtysh_end_all_cmd);
+	install_element(TE_PATH_NODE, &vtysh_end_all_cmd);
 	install_element(RMAP_NODE, &vtysh_end_all_cmd);
 	install_element(PBRMAP_NODE, &vtysh_end_all_cmd);
 	install_element(VTY_NODE, &vtysh_end_all_cmd);
@@ -4009,6 +4042,7 @@ void vtysh_init_vty(void)
 	install_element(BGP_VNC_L2_GROUP_NODE, &exit_vnc_config_cmd);
 
 	install_element(CONFIG_NODE, &key_chain_cmd);
+	install_element(CONFIG_NODE, &te_path_mpls_cmd);
 	install_element(CONFIG_NODE, &vtysh_route_map_cmd);
 	install_element(CONFIG_NODE, &vtysh_pbr_map_cmd);
 	install_element(CONFIG_NODE, &vtysh_no_pbr_map_cmd);
