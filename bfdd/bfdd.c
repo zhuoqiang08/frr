@@ -110,6 +110,7 @@ static struct quagga_signal_t bfd_signals[] = {
 };
 
 static const struct frr_yang_module_info *bfdd_yang_modules[] = {
+	&frr_filter_info,
 	&frr_interface_info,
 	&frr_bfdd_info,
 };
