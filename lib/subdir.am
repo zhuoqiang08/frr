@@ -21,6 +21,7 @@ lib_libfrr_la_SOURCES = \
 	lib/distribute.c \
 	lib/ferr.c \
 	lib/filter.c \
+	lib/filter_cli.c \
 	lib/filter_nb.c \
 	lib/frrcu.c \
 	lib/frrlua.c \
@@ -113,6 +114,7 @@ nodist_lib_libfrr_la_SOURCES = \
 vtysh_scan += \
 	$(top_srcdir)/lib/distribute.c \
 	$(top_srcdir)/lib/filter.c \
+	$(top_srcdir)/lib/filter_cli.c \
 	$(top_srcdir)/lib/if.c \
 	$(top_srcdir)/lib/if_rmap.c \
 	$(top_srcdir)/lib/keychain.c \
@@ -130,6 +132,8 @@ lib_libfrr_la_LIBADD += $(SQLITE3_LIBS)
 lib_libfrr_la_SOURCES += lib/db.c
 endif
 
+lib/filter_cli_clippy.c: $(CLIPPY_DEPS)
+lib/filter_cli.lo: lib/filter_cli_clippy.c
 lib/if_clippy.c: $(CLIPPY_DEPS)
 lib/if.lo: lib/if_clippy.c
 lib/plist_clippy.c: $(CLIPPY_DEPS)
