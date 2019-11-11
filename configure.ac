@@ -544,6 +544,8 @@ AC_ARG_ENABLE([pcreposix],
   AS_HELP_STRING([--enable-pcreposix], [enable using PCRE Posix libs for regex functions]))
 AC_ARG_ENABLE([fpm],
   AS_HELP_STRING([--enable-fpm], [enable Forwarding Plane Manager support]))
+AC_ARG_ENABLE([pcep],
+  AS_HELP_STRING([--enable-pcep], [enable PCEP support for pathd]))
 AC_ARG_ENABLE([systemd],
   AS_HELP_STRING([--enable-systemd], [enable Systemd support]))
 AC_ARG_ENABLE([werror],
@@ -2267,6 +2269,20 @@ AM_CONDITIONAL([SNMP], [test "x$SNMP_METHOD" = "xagentx"])
 AM_CONDITIONAL([IRDP], [$IRDP])
 AM_CONDITIONAL([FPM], [test "x$enable_fpm" = "xyes"])
 AM_CONDITIONAL([HAVE_PROTOBUF], [test "x$enable_protobuf" = "xyes"])
+
+dnl PCEP plugin
+AM_CONDITIONAL([PCEP], [test x"${enable_pcep}" = x"yes"])
+AS_IF([test x"${enable_pcep}" = x"yes"], [
+  AC_CHECK_LIB([pcep_pcc_api], [initialize_pcc], [
+    PCEP_LIBS="-lpcep_pcc_api -lpcep_session_logic -lpcep_socket_comm -lpcep_timers -lpcep_messages -lpcep_utils"
+  ],[
+    AC_MSG_ERROR([PCEP library libpcep_timers not found])
+  ], [
+    -lpcep_session_logic -lpcep_socket_comm -lpcep_timers -lpcep_messages -lpcep_utils
+  ])
+  AC_SUBST([PCEP_LIBS])
+])
+
 dnl daemons
 AM_CONDITIONAL([VTYSH], [test "x$VTYSH" = "xvtysh"])
 AM_CONDITIONAL([ZEBRA], [test "${enable_zebra}" != "no"])
