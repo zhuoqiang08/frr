@@ -446,6 +446,24 @@ DEFPY(
 }
 
 DEFPY(
+	no_access_list_legacy_seq, no_access_list_legacy_seq_cmd,
+	"no access-list <(1-99)|(100-199)|(1300-1999)|(2000-2699)>$number seq (1-4294967295)$seq",
+	NO_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_XLEG_STR
+	ACCESS_LIST_SEQ_STR)
+{
+	char xpath[XPATH_MAXLEN];
+
+	snprintf(xpath, sizeof(xpath),
+		 "/frr-filter:lib/access-list-legacy[number='%s']/entry[sequence='%s']",
+		 number_str, seq_str);
+	nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
+
+	return nb_cli_apply_changes(vty, NULL);
+}
+
+DEFPY(
 	access_list_legacy_remark, access_list_legacy_remark_cmd,
 	"access-list <(1-99)|(100-199)|(1300-1999)|(2000-2699)>$number remark LINE...",
 	ACCESS_LIST_STR
@@ -488,6 +506,15 @@ DEFPY(
 
 	return nb_cli_apply_changes(vty, NULL);
 }
+
+ALIAS(
+	no_access_list_legacy_remark, no_access_list_legacy_remark_line_cmd,
+	"no access-list <(1-99)|(100-199)|(1300-1999)|(2000-2699)>$number remark LINE...",
+	NO_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_XLEG_STR
+	ACCESS_LIST_REMARK_STR
+	ACCESS_LIST_REMARK_LINE_STR)
 
 /*
  * Zebra access lists.
@@ -619,6 +646,24 @@ DEFPY(
 }
 
 DEFPY(
+	no_access_list_seq, no_access_list_seq_cmd,
+	"no access-list WORD$name seq (1-4294967295)$seq",
+	NO_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_ZEBRA_STR
+	ACCESS_LIST_SEQ_STR)
+{
+	char xpath[XPATH_MAXLEN];
+
+	snprintf(xpath, sizeof(xpath),
+		 "/frr-filter:lib/access-list[type='ipv4'][name='%s']/entry[sequence='%s']",
+		 name, seq_str);
+	nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
+
+	return nb_cli_apply_changes(vty, NULL);
+}
+
+DEFPY(
 	no_access_list_all, no_access_list_all_cmd,
 	"no access-list WORD$name",
 	NO_STR
@@ -677,6 +722,15 @@ DEFPY(
 
 	return nb_cli_apply_changes(vty, NULL);
 }
+
+ALIAS(
+	no_access_list_remark, no_access_list_remark_line_cmd,
+	"no access-list WORD$name remark LINE...",
+	NO_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_ZEBRA_STR
+	ACCESS_LIST_REMARK_STR
+	ACCESS_LIST_REMARK_LINE_STR)
 
 DEFPY(
 	ipv6_access_list, ipv6_access_list_cmd,
@@ -824,6 +878,25 @@ DEFPY(
 }
 
 DEFPY(
+	no_ipv6_access_list_seq, no_ipv6_access_list_seq_cmd,
+	"no ipv6 access-list WORD$name seq (1-4294967295)$seq",
+	NO_STR
+	IPV6_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_ZEBRA_STR
+	ACCESS_LIST_SEQ_STR)
+{
+	char xpath[XPATH_MAXLEN];
+
+	snprintf(xpath, sizeof(xpath),
+		 "/frr-filter:lib/access-list[type='ipv6'][name='%s']/entry[sequence='%s']",
+		 name, seq_str);
+	nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
+
+	return nb_cli_apply_changes(vty, NULL);
+}
+
+DEFPY(
 	ipv6_access_list_remark, ipv6_access_list_remark_cmd,
 	"ipv6 access-list WORD$name remark LINE...",
 	IPV6_STR
@@ -868,6 +941,16 @@ DEFPY(
 
 	return nb_cli_apply_changes(vty, NULL);
 }
+
+ALIAS(
+	no_ipv6_access_list_remark, no_ipv6_access_list_remark_line_cmd,
+	"no ipv6 access-list WORD$name remark LINE...",
+	NO_STR
+	IPV6_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_ZEBRA_STR
+	ACCESS_LIST_REMARK_STR
+	ACCESS_LIST_REMARK_LINE_STR)
 
 DEFPY(
 	mac_access_list, mac_access_list_cmd,
@@ -1004,6 +1087,25 @@ DEFPY(
 }
 
 DEFPY(
+	no_mac_access_list_seq, no_mac_access_list_seq_cmd,
+	"no mac access-list WORD$name seq (1-4294967295)$seq",
+	NO_STR
+	MAC_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_ZEBRA_STR
+	ACCESS_LIST_SEQ_STR)
+{
+	char xpath[XPATH_MAXLEN];
+
+	snprintf(xpath, sizeof(xpath),
+		 "/frr-filter:lib/access-list[type='mac'][name='%s']/entry[sequence='%s']",
+		 name, seq_str);
+	nb_cli_enqueue_change(vty, xpath, NB_OP_DESTROY, NULL);
+
+	return nb_cli_apply_changes(vty, NULL);
+}
+
+DEFPY(
 	mac_access_list_remark, mac_access_list_remark_cmd,
 	"mac access-list WORD$name remark LINE...",
 	MAC_STR
@@ -1049,6 +1151,16 @@ DEFPY(
 	return nb_cli_apply_changes(vty, NULL);
 }
 
+ALIAS(
+	no_mac_access_list_remark, no_mac_access_list_remark_line_cmd,
+	"no mac access-list WORD$name remark LINE...",
+	NO_STR
+	MAC_STR
+	ACCESS_LIST_STR
+	ACCESS_LIST_ZEBRA_STR
+	ACCESS_LIST_REMARK_STR
+	ACCESS_LIST_REMARK_LINE_STR)
+
 void filter_cli_init(void)
 {
 	/* access-list cisco-style (legacy). */
@@ -1057,25 +1169,33 @@ void filter_cli_init(void)
 	install_element(CONFIG_NODE, &access_list_ext_cmd);
 	install_element(CONFIG_NODE, &no_access_list_ext_cmd);
 	install_element(CONFIG_NODE, &no_access_list_legacy_cmd);
+	install_element(CONFIG_NODE, &no_access_list_legacy_seq_cmd);
 	install_element(CONFIG_NODE, &access_list_legacy_remark_cmd);
 	install_element(CONFIG_NODE, &no_access_list_legacy_remark_cmd);
+	install_element(CONFIG_NODE, &no_access_list_legacy_remark_line_cmd);
 
 	/* access-list zebra-style. */
 	install_element(CONFIG_NODE, &access_list_cmd);
 	install_element(CONFIG_NODE, &no_access_list_cmd);
 	install_element(CONFIG_NODE, &no_access_list_all_cmd);
+	install_element(CONFIG_NODE, &no_access_list_seq_cmd);
 	install_element(CONFIG_NODE, &access_list_remark_cmd);
 	install_element(CONFIG_NODE, &no_access_list_remark_cmd);
+	install_element(CONFIG_NODE, &no_access_list_remark_line_cmd);
 
 	install_element(CONFIG_NODE, &ipv6_access_list_cmd);
 	install_element(CONFIG_NODE, &no_ipv6_access_list_cmd);
 	install_element(CONFIG_NODE, &no_ipv6_access_list_all_cmd);
+	install_element(CONFIG_NODE, &no_ipv6_access_list_seq_cmd);
 	install_element(CONFIG_NODE, &ipv6_access_list_remark_cmd);
 	install_element(CONFIG_NODE, &no_ipv6_access_list_remark_cmd);
+	install_element(CONFIG_NODE, &no_ipv6_access_list_remark_line_cmd);
 
 	install_element(CONFIG_NODE, &mac_access_list_cmd);
 	install_element(CONFIG_NODE, &no_mac_access_list_cmd);
 	install_element(CONFIG_NODE, &no_mac_access_list_all_cmd);
+	install_element(CONFIG_NODE, &no_mac_access_list_seq_cmd);
 	install_element(CONFIG_NODE, &mac_access_list_remark_cmd);
 	install_element(CONFIG_NODE, &no_mac_access_list_remark_cmd);
+	install_element(CONFIG_NODE, &no_mac_access_list_remark_line_cmd);
 }
