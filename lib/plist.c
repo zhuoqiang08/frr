@@ -519,8 +519,6 @@ void prefix_list_entry_delete(struct prefix_list *plist,
 	else
 		plist->tail = pentry->prev;
 
-	prefix_list_entry_free(pentry);
-
 	plist->count--;
 
 	if (update_list) {
