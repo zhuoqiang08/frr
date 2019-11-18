@@ -2273,12 +2273,10 @@ AM_CONDITIONAL([HAVE_PROTOBUF], [test "x$enable_protobuf" = "xyes"])
 dnl PCEP plugin
 AM_CONDITIONAL([PCEP], [test x"${enable_pcep}" = x"yes"])
 AS_IF([test x"${enable_pcep}" = x"yes"], [
-  AC_CHECK_LIB([pcep_pcc_api], [initialize_pcc], [
-    PCEP_LIBS="-lpcep_pcc_api -lpcep_session_logic -lpcep_socket_comm -lpcep_timers -lpcep_messages -lpcep_utils"
+  AC_CHECK_LIB([pcep_pcc], [initialize_pcc], [
+    PCEP_LIBS="-lpcep_pcc"
   ],[
-    AC_MSG_ERROR([PCEP library libpcep_timers not found])
-  ], [
-    -lpcep_session_logic -lpcep_socket_comm -lpcep_timers -lpcep_messages -lpcep_utils
+    AC_MSG_ERROR([PCEP library libpcep_pcc not found])
   ])
   AC_SUBST([PCEP_LIBS])
 ])
