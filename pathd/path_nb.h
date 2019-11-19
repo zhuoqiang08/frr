@@ -22,6 +22,62 @@
 extern const struct frr_yang_module_info frr_pathd_info;
 
 /* Mandatory callbacks. */
+int pathd_te_segment_list_create(enum nb_event event,
+				 const struct lyd_node *dnode,
+				 union nb_resource *resource);
+int pathd_te_segment_list_destroy(enum nb_event event,
+				  const struct lyd_node *dnode);
+int pathd_te_segment_list_label_move(enum nb_event event,
+				     const struct lyd_node *dnode);
+int pathd_te_segment_list_label_create(enum nb_event event,
+				       const struct lyd_node *dnode,
+				       union nb_resource *resource);
+int pathd_te_segment_list_label_destroy(enum nb_event event,
+					const struct lyd_node *dnode);
+int pathd_te_sr_policy_create(enum nb_event event, const struct lyd_node *dnode,
+			      union nb_resource *resource);
+int pathd_te_sr_policy_destroy(enum nb_event event,
+			       const struct lyd_node *dnode);
+int pathd_te_sr_policy_color_modify(enum nb_event event,
+				    const struct lyd_node *dnode,
+				    union nb_resource *resource);
+int pathd_te_sr_policy_color_destroy(enum nb_event event,
+				     const struct lyd_node *dnode);
+int pathd_te_sr_policy_endpoint_modify(enum nb_event event,
+				       const struct lyd_node *dnode,
+				       union nb_resource *resource);
+int pathd_te_sr_policy_endpoint_destroy(enum nb_event event,
+					const struct lyd_node *dnode);
+int pathd_te_sr_policy_binding_sid_modify(enum nb_event event,
+					  const struct lyd_node *dnode,
+					  union nb_resource *resource);
+int pathd_te_sr_policy_binding_sid_destroy(enum nb_event event,
+					   const struct lyd_node *dnode);
+int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
+					     const struct lyd_node *dnode,
+					     union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
+					      const struct lyd_node *dnode);
+int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_protocol_origin_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
+int pathd_te_sr_policy_candidate_path_originator_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_originator_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
+int pathd_te_sr_policy_candidate_path_dynamic_flag_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_dynamic_flag_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
+int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_segment_list_name_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
 
 /* Optional 'apply_finish' callbacks. */
 
