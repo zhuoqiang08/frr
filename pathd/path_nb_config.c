@@ -210,13 +210,16 @@ int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 {
 	struct te_sr_policy *te_sr_policy;
 	uint32_t preference;
+	const char *segment_list_name;
 
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
 	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
 	preference = yang_dnode_get_uint32(dnode, "./preference");
-	te_sr_policy_candidate_path_add(te_sr_policy, preference);
+	segment_list_name = yang_dnode_get_string(dnode, "./segment-list-name");
+	te_sr_policy_candidate_path_add(te_sr_policy, preference,
+					strdup(segment_list_name));
 
 	return NB_OK;
 }
@@ -282,17 +285,6 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
 {
-	const char *segment_list_name;
-	struct te_sr_policy *te_sr_policy;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
-	segment_list_name = yang_dnode_get_string(dnode, NULL);
-	te_sr_policy_candidate_path_segment_list_name_add(
-		te_sr_policy, strdup(segment_list_name));
-
 	return NB_OK;
 }
 
