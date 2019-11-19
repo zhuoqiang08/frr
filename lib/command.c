@@ -124,11 +124,6 @@ const char *node_names[] = {
 	"ldp l2vpn",		    // LDP_L2VPN_NODE,
 	"ldp",			    // LDP_PSEUDOWIRE_NODE,
 	"isis",			    // ISIS_NODE,
-	"ipv4 access list",	 // ACCESS_NODE,
-	"ipv4 prefix list",	 // PREFIX_NODE,
-	"ipv6 access list",	 // ACCESS_IPV6_NODE,
-	"MAC access list",	  // ACCESS_MAC_NODE,
-	"ipv6 prefix list",	 // PREFIX_IPV6_NODE,
 	"as list",		    // AS_LIST_NODE,
 	"community list",	   // COMMUNITY_LIST_NODE,
 	"routemap",		    // RMAP_NODE,
@@ -152,6 +147,7 @@ const char *node_names[] = {
 	"openfabric",		    // OPENFABRIC_NODE
 	"vrrp",			    /* VRRP_NODE */
 	"bmp",			 /* BMP_NODE */
+	"filter"		    /* FILTER_NODE */
 };
 /* clang-format on */
 

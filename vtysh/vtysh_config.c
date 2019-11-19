@@ -318,25 +318,6 @@ void vtysh_config_parse_line(void *arg, const char *line)
 			config = config_get(RMAP_NODE, line);
 		else if (strncmp(line, "pbr-map", strlen("pbr-map")) == 0)
 			config = config_get(PBRMAP_NODE, line);
-		else if (strncmp(line, "access-list", strlen("access-list"))
-			 == 0)
-			config = config_get(ACCESS_NODE, line);
-		else if (strncmp(line, "ipv6 access-list",
-				 strlen("ipv6 access-list"))
-			 == 0)
-			config = config_get(ACCESS_IPV6_NODE, line);
-		else if (strncmp(line, "mac access-list",
-				 strlen("mac access-list"))
-			 == 0)
-			config = config_get(ACCESS_MAC_NODE, line);
-		else if (strncmp(line, "ip prefix-list",
-				 strlen("ip prefix-list"))
-			 == 0)
-			config = config_get(PREFIX_NODE, line);
-		else if (strncmp(line, "ipv6 prefix-list",
-				 strlen("ipv6 prefix-list"))
-			 == 0)
-			config = config_get(PREFIX_IPV6_NODE, line);
 		else if (strncmp(line, "bgp as-path access-list",
 				 strlen("bgp as-path access-list"))
 			 == 0)
@@ -400,15 +381,19 @@ void vtysh_config_parse_line(void *arg, const char *line)
 			config = config_get(MPLS_NODE, line);
 		else if (strncmp(line, "bfd", strlen("bfd")) == 0)
 			config = config_get(BFD_NODE, line);
+		else if (strncmp(line, "access-list", strlen("access-list")) == 0
+			 || strncmp(line, "ipv6 access-list", strlen("ipv6 access-list")) == 0
+			 || strncmp(line, "mac access-list", strlen("mac access-list")) == 0
+			 || strncmp(line, "ip prefix-list", strlen("ip prefix-list")) == 0
+			 || strncmp(line, "ipv6 prefix-list", strlen("ipv6 prefix-list")) == 0)
+			config = config_get(FILTER_NODE, line);
 		else {
 			if (strncmp(line, "log", strlen("log")) == 0
 			    || strncmp(line, "hostname", strlen("hostname"))
 				       == 0
 			    || strncmp(line, "frr", strlen("frr")) == 0
 			    || strncmp(line, "agentx", strlen("agentx")) == 0
-			    || strncmp(line, "no log", strlen("no log")) == 0
-			    || strncmp(line, "no ip prefix-list", strlen("no ip prefix-list")) == 0
-			    || strncmp(line, "no ipv6 prefix-list", strlen("no ipv6 prefix-list")) == 0)
+			    || strncmp(line, "no log", strlen("no log")) == 0)
 				config_add_line_uniq(config_top, line);
 			else
 				config_add_line(config_top, line);
@@ -421,10 +406,8 @@ void vtysh_config_parse_line(void *arg, const char *line)
 /* Macro to check delimiter is needed between each configuration line
  * or not. */
 #define NO_DELIMITER(I)                                                        \
-	((I) == ACCESS_NODE || (I) == PREFIX_NODE || (I) == IP_NODE            \
+	((I) == IP_NODE || (I) == FORWARDING_NODE || (I) == FILTER_NODE        \
 	 || (I) == AS_LIST_NODE || (I) == COMMUNITY_LIST_NODE                  \
-	 || (I) == ACCESS_IPV6_NODE || (I) == ACCESS_MAC_NODE                  \
-	 || (I) == PREFIX_IPV6_NODE || (I) == FORWARDING_NODE                  \
 	 || (I) == DEBUG_NODE || (I) == AAA_NODE || (I) == VRF_DEBUG_NODE      \
 	 || (I) == NORTHBOUND_DEBUG_NODE || (I) == RMAP_DEBUG_NODE             \
 	 || (I) == RESOLVER_DEBUG_NODE || (I) == MPLS_NODE)

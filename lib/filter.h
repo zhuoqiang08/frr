@@ -24,6 +24,7 @@
 
 #include "if.h"
 #include "prefix.h"
+#include "northbound.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -147,6 +148,22 @@ struct filter *filter_lookup_zebra(struct access_list *access,
 				   struct filter *mnew);
 
 extern const struct frr_yang_module_info frr_filter_info;
+
+/* filter_cli.c */
+void access_list_legacy_entry_show(struct vty *vty, struct lyd_node *ln,
+				   bool show_defaults);
+void access_list_legacy_remark_show(struct vty *vty, struct lyd_node *ln,
+				    bool show_defaults);
+void access_list_entry_show(struct vty *vty, struct lyd_node *ln,
+			    bool show_defaults);
+void access_list_remark_show(struct vty *vty, struct lyd_node *ln,
+			     bool show_defaults);
+void prefix_list_entry_show(struct vty *vty, struct lyd_node *ln,
+			    bool show_defaults);
+void prefix_list_description_show(struct vty *vty, struct lyd_node *ln,
+				  bool show_defaults);
+
+void filter_show_end(struct vty *vty, struct lyd_node *ln);
 
 void filter_cli_init(void);
 

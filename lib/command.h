@@ -133,11 +133,6 @@ enum node_type {
 	LDP_L2VPN_NODE,		 /* LDP L2VPN node */
 	LDP_PSEUDOWIRE_NODE,     /* LDP Pseudowire node */
 	ISIS_NODE,		 /* ISIS protocol mode */
-	ACCESS_NODE,		 /* Access list node. */
-	PREFIX_NODE,		 /* Prefix list node. */
-	ACCESS_IPV6_NODE,	/* Access list node. */
-	ACCESS_MAC_NODE,	 /* MAC access list node*/
-	PREFIX_IPV6_NODE,	/* Prefix list node. */
 	AS_LIST_NODE,		 /* AS list node. */
 	COMMUNITY_LIST_NODE,     /* Community list node. */
 	RMAP_NODE,		 /* Route map node. */
@@ -160,6 +155,7 @@ enum node_type {
 	OPENFABRIC_NODE,	/* OpenFabric router configuration node */
 	VRRP_NODE,		 /* VRRP node */
 	BMP_NODE,		/* BMP config under router bgp */
+	FILTER_NODE,		 /* access-list/prefix-list node. */
 	NODE_TYPE_MAX, /* maximum */
 };
 

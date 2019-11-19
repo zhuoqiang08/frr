@@ -777,82 +777,6 @@ void config_write_access_zebra(struct vty *vty, struct filter *mfilter)
 	vty_out(vty, "\n");
 }
 
-static int config_write_access(struct vty *vty, afi_t afi)
-{
-	struct access_list *access;
-	struct access_master *master;
-	struct filter *mfilter;
-	int write = 0;
-
-	master = access_master_get(afi);
-	if (master == NULL)
-		return 0;
-
-	for (access = master->num.head; access; access = access->next) {
-		if (access->remark) {
-			vty_out(vty, "%saccess-list %s remark %s\n",
-				(afi == AFI_IP) ? ("")
-						: ((afi == AFI_IP6) ? ("ipv6 ")
-								    : ("mac ")),
-				access->name, access->remark);
-			write++;
-		}
-
-		for (mfilter = access->head; mfilter; mfilter = mfilter->next) {
-			vty_out(vty, "%saccess-list %s seq %" PRId64 " %s",
-				(afi == AFI_IP) ? ("")
-						: ((afi == AFI_IP6) ? ("ipv6 ")
-								    : ("mac ")),
-				access->name, mfilter->seq,
-				filter_type_str(mfilter));
-
-			if (mfilter->cisco)
-				config_write_access_cisco(vty, mfilter);
-			else
-				config_write_access_zebra(vty, mfilter);
-
-			write++;
-		}
-	}
-
-	for (access = master->str.head; access; access = access->next) {
-		if (access->remark) {
-			vty_out(vty, "%saccess-list %s remark %s\n",
-				(afi == AFI_IP) ? ("")
-						: ((afi == AFI_IP6) ? ("ipv6 ")
-								    : ("mac ")),
-				access->name, access->remark);
-			write++;
-		}
-
-		for (mfilter = access->head; mfilter; mfilter = mfilter->next) {
-			vty_out(vty, "%saccess-list %s seq %" PRId64 " %s",
-				(afi == AFI_IP) ? ("")
-						: ((afi == AFI_IP6) ? ("ipv6 ")
-								    : ("mac ")),
-				access->name, mfilter->seq,
-				filter_type_str(mfilter));
-
-			if (mfilter->cisco)
-				config_write_access_cisco(vty, mfilter);
-			else
-				config_write_access_zebra(vty, mfilter);
-
-			write++;
-		}
-	}
-	return write;
-}
-
-static struct cmd_node access_mac_node = {
-	ACCESS_MAC_NODE, "", /* Access list has no interface. */
-	1};
-
-static int config_write_access_mac(struct vty *vty)
-{
-	return config_write_access(vty, AFI_L2VPN);
-}
-
 static void access_list_reset_mac(void)
 {
 	struct access_list *access;
@@ -882,20 +806,8 @@ static void access_list_reset_mac(void)
 /* Install vty related command. */
 static void access_list_init_mac(void)
 {
-	install_node(&access_mac_node, config_write_access_mac);
-
 	install_element(ENABLE_NODE, &show_mac_access_list_cmd);
 	install_element(ENABLE_NODE, &show_mac_access_list_name_cmd);
-}
-
-/* Access-list node. */
-static struct cmd_node access_node = {ACCESS_NODE,
-				      "", /* Access list has no interface. */
-				      1};
-
-static int config_write_access_ipv4(struct vty *vty)
-{
-	return config_write_access(vty, AFI_IP);
 }
 
 static void access_list_reset_ipv4(void)
@@ -927,17 +839,8 @@ static void access_list_reset_ipv4(void)
 /* Install vty related command. */
 static void access_list_init_ipv4(void)
 {
-	install_node(&access_node, config_write_access_ipv4);
-
 	install_element(ENABLE_NODE, &show_ip_access_list_cmd);
 	install_element(ENABLE_NODE, &show_ip_access_list_name_cmd);
-}
-
-static struct cmd_node access_ipv6_node = {ACCESS_IPV6_NODE, "", 1};
-
-static int config_write_access_ipv6(struct vty *vty)
-{
-	return config_write_access(vty, AFI_IP6);
 }
 
 static void access_list_reset_ipv6(void)
@@ -968,8 +871,6 @@ static void access_list_reset_ipv6(void)
 
 static void access_list_init_ipv6(void)
 {
-	install_node(&access_ipv6_node, config_write_access_ipv6);
-
 	install_element(ENABLE_NODE, &show_ipv6_access_list_cmd);
 	install_element(ENABLE_NODE, &show_ipv6_access_list_name_cmd);
 }

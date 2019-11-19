@@ -468,6 +468,70 @@ DEFPY(
 	return nb_cli_apply_changes(vty, NULL);
 }
 
+void access_list_legacy_entry_show(struct vty *vty, struct lyd_node *ln,
+				   bool show_defaults)
+{
+	const char *action, *number, *seq, *strp;
+	struct in_addr mask;
+	struct prefix prefix;
+	char src[INET6_ADDRSTRLEN], src_mask[INET6_ADDRSTRLEN];
+	char dst[INET6_ADDRSTRLEN], dst_mask[INET6_ADDRSTRLEN];
+
+	number = yang_dnode_get_string(ln, "../number");
+	action = yang_dnode_get_string(ln, "./action");
+	seq = yang_dnode_get_string(ln, "./sequence");
+
+	if (yang_dnode_exists(ln, "./destination-network")) {
+		yang_dnode_get_prefix(&prefix, ln, "./destination-network");
+		inet_ntop(AF_INET, &prefix.u.prefix4, dst, sizeof(dst));
+		masklen2ip(prefix.prefixlen, &mask);
+		inet_ntop(AF_INET, &mask, dst_mask, sizeof(dst_mask));
+	} else if (yang_dnode_exists(ln, "./destination-host")) {
+		strp = yang_dnode_get_string(ln, "./destination-host");
+		strlcpy(dst, strp, sizeof(dst));
+		dst_mask[0] = 0;
+	} else {
+		strlcpy(dst, "any", sizeof(dst));
+		dst_mask[0] = 0;
+	}
+
+	if (yang_dnode_exists(ln, "./network")) {
+		yang_dnode_get_prefix(&prefix, ln, "./network");
+		inet_ntop(AF_INET, &prefix.u.prefix4, dst, sizeof(dst));
+		masklen2ip(prefix.prefixlen, &mask);
+		inet_ntop(AF_INET, &mask, src_mask, sizeof(src_mask));
+	} else if (yang_dnode_exists(ln, "./host")) {
+		strp = yang_dnode_get_string(ln, "./host");
+		strlcpy(src, strp, sizeof(src));
+		dst_mask[0] = 0;
+	} else {
+		strlcpy(src, "any", sizeof(src));
+		dst_mask[0] = 0;
+	}
+
+	vty_out(vty, "access-list %s seq %s %s", number, seq, action);
+	if (dst[0])
+		vty_out(vty, " ip");
+
+	if (src_mask[0] == 0 && strcmp(src, "any") != 0)
+		vty_out(vty, " host");
+
+	vty_out(vty, " %s", src);
+	if (src_mask[0])
+		vty_out(vty, " %s", src_mask);
+
+	if (dst[0]) {
+		if (dst_mask[0] == 0 && strcmp(dst, "any") != 0)
+			vty_out(vty, " host");
+
+		vty_out(vty, " %s", dst);
+		if (dst_mask[0])
+			vty_out(vty, " %s", dst_mask);
+	}
+
+	vty_out(vty, "\n");
+}
+
 DEFPY(
 	access_list_legacy_remark, access_list_legacy_remark_cmd,
 	"access-list <(1-99)|(100-199)|(1300-1999)|(2000-2699)>$number remark LINE...",
@@ -520,6 +584,17 @@ ALIAS(
 	ACCESS_LIST_XLEG_STR
 	ACCESS_LIST_REMARK_STR
 	ACCESS_LIST_REMARK_LINE_STR)
+
+void access_list_legacy_remark_show(struct vty *vty, struct lyd_node *ln,
+				    bool show_defaults)
+{
+	const char *number, *remark;
+
+	remark = yang_dnode_get_string(ln, NULL);
+	number = yang_dnode_get_string(ln, "../number");
+
+	vty_out(vty, "access-list %s remark %s", number, remark);
+}
 
 /*
  * Zebra access lists.
@@ -684,6 +759,57 @@ DEFPY(
 	return nb_cli_apply_changes(vty, NULL);
 }
 
+void access_list_entry_show(struct vty *vty, struct lyd_node *ln,
+			    bool show_defaults)
+{
+	const char *action, *name, *seq;
+	bool exact;
+	int type;
+
+	action = yang_dnode_get_string(ln, "./action");
+	seq = yang_dnode_get_string(ln, "./sequence");
+	name = yang_dnode_get_string(ln, "../name");
+	type = yang_dnode_get_enum(ln, "../type");
+
+	switch (type) {
+	case 0: /* ipv4 */
+		break;
+	case 1: /* ipv6 */
+		vty_out(vty, "ipv6 ");
+		break;
+	case 2: /* mac */
+		vty_out(vty, "mac ");
+		break;
+	}
+
+	vty_out(vty, "access-list %s seq %s %s", name, seq, action);
+
+	if (yang_dnode_exists(ln, "./any")) {
+		vty_out(vty, " any\n");
+		return;
+	}
+
+	switch (type) {
+	case 0: /* ipv4 */
+		exact = yang_dnode_get_bool(ln, "./ipv4-exact-match");
+		vty_out(vty, " %s%s",
+			yang_dnode_get_string(ln, "./ipv4-prefix"),
+			exact ? " exact-match" : "");
+		break;
+	case 1: /* ipv6 */
+		exact = yang_dnode_get_bool(ln, "./ipv6-exact-match");
+		vty_out(vty, " %s%s",
+			yang_dnode_get_string(ln, "./ipv6-prefix"),
+			exact ? " exact-match" : "");
+		break;
+	case 2: /* mac */
+		vty_out(vty, " %s", yang_dnode_get_string(ln, "./mac"));
+		break;
+	}
+
+	vty_out(vty, "\n");
+}
+
 DEFPY(
 	access_list_remark, access_list_remark_cmd,
 	"access-list WORD$name remark LINE...",
@@ -736,6 +862,30 @@ ALIAS(
 	ACCESS_LIST_ZEBRA_STR
 	ACCESS_LIST_REMARK_STR
 	ACCESS_LIST_REMARK_LINE_STR)
+
+void access_list_remark_show(struct vty *vty, struct lyd_node *ln,
+			     bool show_defaults)
+{
+	const char *name, *remark;
+	int type;
+
+	remark = yang_dnode_get_string(ln, NULL);
+	type = yang_dnode_get_enum(ln, "../type");
+	name = yang_dnode_get_string(ln, "../name");
+
+	switch (type) {
+	case 0: /* ipv4 */
+		break;
+	case 1: /* ipv6 */
+		vty_out(vty, "ipv6 ");
+		break;
+	case 2: /* mac */
+		vty_out(vty, "mac ");
+		break;
+	}
+
+	vty_out(vty, "access-list %s remark %s\n", name, remark);
+}
 
 DEFPY(
 	ipv6_access_list, ipv6_access_list_cmd,
@@ -1346,6 +1496,65 @@ DEFPY(
 	return nb_cli_apply_changes(vty, NULL);
 }
 
+void prefix_list_entry_show(struct vty *vty, struct lyd_node *ln,
+			    bool show_defaults)
+{
+	const char *prefix, *ge, *le;
+	int type;
+	bool any;
+
+	prefix = ge = le = NULL;
+	any = yang_dnode_exists(ln, "./any");
+
+	type = yang_dnode_get_enum(ln, "../type");
+	switch (type) {
+	case 0: /* ipv4 */
+		vty_out(vty, "ip prefix-list");
+		if (any)
+			break;
+
+		prefix = yang_dnode_get_string(ln, "./ipv4-prefix");
+		if (yang_dnode_exists(ln,
+		    "./ipv4-prefix-length-greater-or-equal"))
+			ge = yang_dnode_get_string(ln,
+						   "./ipv4-prefix-length-greater-or-equal");
+
+		if (yang_dnode_exists(ln,
+		    "./ipv4-prefix-length-lesser-or-equal"))
+			le = yang_dnode_get_string(ln,
+						   "./ipv4-prefix-length-lesser-or-equal");
+		break;
+	case 1: /* ipv6 */
+		vty_out(vty, "ipv6 prefix-list");
+		if (any)
+			break;
+
+		prefix = yang_dnode_get_string(ln, "./ipv6-prefix");
+		if (yang_dnode_exists(ln,
+		    "./ipv6-prefix-length-greater-or-equal"))
+			ge = yang_dnode_get_string(ln,
+						   "./ipv6-prefix-length-greater-or-equal");
+
+		if (yang_dnode_exists(ln,
+		    "./ipv6-prefix-length-lesser-or-equal"))
+			le = yang_dnode_get_string(ln,
+						   "./ipv6-prefix-length-lesser-or-equal");
+		break;
+	}
+
+	vty_out(vty, " %s", yang_dnode_get_string(ln, "../name"));
+	if (any == false) {
+		vty_out(vty, " %s", prefix);
+		if (ge)
+			vty_out(vty, " ge %s", ge);
+		if (le)
+			vty_out(vty, " le %s", le);
+	} else
+		vty_out(vty, " any");
+
+	vty_out(vty, "\n");
+}
+
 DEFPY(
 	ip_prefix_list_remark, ip_prefix_list_remark_cmd,
 	"ip prefix-list WORD$name description LINE...",
@@ -1586,8 +1795,52 @@ ALIAS(
 	PREFIX_LIST_DESC_STR
 	ACCESS_LIST_REMARK_LINE_STR)
 
+void prefix_list_description_show(struct vty *vty, struct lyd_node *ln,
+				  bool show_defaults)
+{
+	const char *name, *desc;
+	int type;
+
+	desc = yang_dnode_get_string(ln, NULL);
+	type = yang_dnode_get_enum(ln, "../type");
+	name = yang_dnode_get_string(ln, "../name");
+	switch (type) {
+	case 0: /* ipv4 */
+		vty_out(vty, "ip prefix-list %s", name);
+		break;
+	case 1: /* ipv6 */
+		vty_out(vty, "ipv6 prefix-list %s", name);
+		break;
+	}
+
+	vty_out(vty, " description %s\n", desc);
+}
+
+static int filter_write_config(struct vty *vty)
+{
+	struct lyd_node *ln;
+	int written = 0;
+
+	ln = yang_dnode_get(running_config->dnode, "/frr-filter:lib");
+	if (ln) {
+		nb_cli_show_dnode_cmds(vty, ln, false);
+		written = 1;
+	}
+
+	return written;
+}
+
+void filter_show_end(struct vty *vty, struct lyd_node *ln)
+{
+	vty_out(vty, "!\n");
+}
+
+static struct cmd_node filter_node = {FILTER_NODE, "", 1};
+
 void filter_cli_init(void)
 {
+	install_node(&filter_node, filter_write_config);
+
 	/* access-list cisco-style (legacy). */
 	install_element(CONFIG_NODE, &access_list_std_cmd);
 	install_element(CONFIG_NODE, &no_access_list_std_cmd);
