@@ -1782,7 +1782,7 @@ static void zread_mpls_labels_add(ZAPI_HANDLER_ARGS)
 		struct zapi_nexthop_label *znh;
 
 		znh = &zl.nexthops[i];
-		mpls_lsp_install(zvrf, zl.type, zl.local_label, znh->label,
+		mpls_lsp_install(zvrf, zl.type, zl.local_label, 1, &znh->label,
 				 znh->type, &znh->address, znh->ifindex);
 
 		if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN))
@@ -1883,7 +1883,7 @@ static void zread_mpls_labels_replace(ZAPI_HANDLER_ARGS)
 		struct zapi_nexthop_label *znh;
 
 		znh = &zl.nexthops[i];
-		mpls_lsp_install(zvrf, zl.type, zl.local_label, znh->label,
+		mpls_lsp_install(zvrf, zl.type, zl.local_label, 1, &znh->label,
 				 znh->type, &znh->address, znh->ifindex);
 
 		if (CHECK_FLAG(zl.message, ZAPI_LABELS_FTN)) {
@@ -1893,6 +1893,66 @@ static void zread_mpls_labels_replace(ZAPI_HANDLER_ARGS)
 					znh->label);
 		}
 	}
+}
+
+static void zread_sr_te_tunnel_set(ZAPI_HANDLER_ARGS)
+{
+	struct stream *s;
+	struct zapi_srte_tunnel zt;
+	zebra_lsp_t *lsp;
+	zebra_nhlfe_t *nhlfe;
+
+	/* Get input stream.  */
+	s = msg;
+	if (zapi_srte_tunnel_decode(s, &zt) < 0) {
+		if (IS_ZEBRA_DEBUG_RECV)
+			zlog_debug("%s: Unable to decode zapi_srte_tunnel sent",
+				   __PRETTY_FUNCTION__);
+		return;
+	}
+	if (zt.label_num < 1) {
+		if (IS_ZEBRA_DEBUG_RECV)
+			zlog_debug(
+				"%s: SR-TE tunnel must contain at least one label",
+				__PRETTY_FUNCTION__);
+		return;
+	}
+
+	if (!mpls_enabled)
+		return;
+
+	mpls_lsp_uninstall_all_vrf(zvrf, zt.type, zt.local_label);
+
+	lsp = mpls_lsp_find(zvrf, zt.labels[0]);
+	if (!lsp)
+		return;
+
+	for (nhlfe = lsp->nhlfe_list; nhlfe; nhlfe = nhlfe->next) {
+		mpls_lsp_install(zvrf, zt.type, zt.local_label, zt.label_num,
+				 zt.labels, nhlfe->nexthop->type,
+				 &nhlfe->nexthop->gate,
+				 nhlfe->nexthop->ifindex);
+	}
+}
+
+static void zread_sr_te_tunnel_delete(ZAPI_HANDLER_ARGS)
+{
+	struct stream *s;
+	struct zapi_srte_tunnel zt;
+
+	/* Get input stream.  */
+	s = msg;
+	if (zapi_srte_tunnel_decode(s, &zt) < 0) {
+		if (IS_ZEBRA_DEBUG_RECV)
+			zlog_debug("%s: Unable to decode zapi_srte_tunnel sent",
+				   __PRETTY_FUNCTION__);
+		return;
+	}
+
+	if (!mpls_enabled)
+		return;
+
+	mpls_lsp_uninstall_all_vrf(zvrf, zt.type, zt.local_label);
 }
 
 /* Send response to a table manager connect request to client */
@@ -2282,10 +2342,11 @@ static void zread_vrf_label(ZAPI_HANDLER_ARGS)
 					   ifp->ifindex);
 	}
 
-	if (nlabel != MPLS_LABEL_NONE)
-		mpls_lsp_install(def_zvrf, ltype, nlabel,
-				 MPLS_LABEL_IMPLICIT_NULL, NEXTHOP_TYPE_IFINDEX,
-				 NULL, ifp->ifindex);
+	if (nlabel != MPLS_LABEL_NONE) {
+		mpls_label_t out_label = MPLS_LABEL_IMPLICIT_NULL;
+		mpls_lsp_install(def_zvrf, ltype, nlabel, 1, &out_label,
+				 NEXTHOP_TYPE_IFINDEX, NULL, ifp->ifindex);
+	}
 
 	zvrf->label[afi] = nlabel;
 stream_failure:
@@ -2522,6 +2583,8 @@ void (*zserv_handlers[])(ZAPI_HANDLER_ARGS) = {
 	[ZEBRA_MPLS_LABELS_ADD] = zread_mpls_labels_add,
 	[ZEBRA_MPLS_LABELS_DELETE] = zread_mpls_labels_delete,
 	[ZEBRA_MPLS_LABELS_REPLACE] = zread_mpls_labels_replace,
+	[ZEBRA_SR_TE_TUNNEL_SET] = zread_sr_te_tunnel_set,
+	[ZEBRA_SR_TE_TUNNEL_DELETE] = zread_sr_te_tunnel_delete,
 	[ZEBRA_IPMR_ROUTE_STATS] = zebra_ipmr_route_stats,
 	[ZEBRA_LABEL_MANAGER_CONNECT] = zread_label_manager_request,
 	[ZEBRA_LABEL_MANAGER_CONNECT_ASYNC] = zread_label_manager_request,
