@@ -248,6 +248,37 @@ int isis_instance_mpls_te_router_address_modify(enum nb_event event,
 						union nb_resource *resource);
 int isis_instance_mpls_te_router_address_destroy(enum nb_event event,
 						 const struct lyd_node *dnode);
+int isis_instance_segment_routing_enabled_modify(enum nb_event event,
+						 const struct lyd_node *dnode,
+						 union nb_resource *resource);
+int isis_instance_segment_routing_enabled_modify(enum nb_event event,
+						 const struct lyd_node *dnode,
+						 union nb_resource *resource);
+int isis_instance_segment_routing_srgb_lower_bound_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int isis_instance_segment_routing_srgb_upper_bound_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int isis_instance_segment_routing_msd_node_msd_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int isis_instance_segment_routing_msd_node_msd_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
+int isis_instance_segment_routing_prefix_sid_map_prefix_sid_create(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int isis_instance_segment_routing_prefix_sid_map_prefix_sid_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
+int isis_instance_segment_routing_prefix_sid_map_prefix_sid_sid_value_type_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int isis_instance_segment_routing_prefix_sid_map_prefix_sid_sid_value_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
+int isis_instance_segment_routing_prefix_sid_map_prefix_sid_last_hop_behavior_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
 int lib_interface_isis_create(enum nb_event event, const struct lyd_node *dnode,
 			      union nb_resource *resource);
 int lib_interface_isis_destroy(enum nb_event event,
@@ -391,6 +422,10 @@ struct yang_data *
 lib_interface_isis_event_counters_authentication_fails_get_elem(
 	const char *xpath, const void *list_entry);
 
+/* Optional 'pre_validate' callbacks. */
+int isis_instance_segment_routing_prefix_sid_map_prefix_sid_pre_validate(
+	const struct lyd_node *dnode);
+
 /* Optional 'apply_finish' callbacks. */
 void ietf_backoff_delay_apply_finish(const struct lyd_node *dnode);
 void area_password_apply_finish(const struct lyd_node *dnode);
@@ -401,6 +436,10 @@ void default_info_origin_ipv6_apply_finish(const struct lyd_node *dnode);
 void redistribute_apply_finish(const struct lyd_node *dnode, int family);
 void redistribute_ipv4_apply_finish(const struct lyd_node *dnode);
 void redistribute_ipv6_apply_finish(const struct lyd_node *dnode);
+void isis_instance_segment_routing_srgb_apply_finish(
+	const struct lyd_node *dnode);
+void isis_instance_segment_routing_prefix_sid_map_prefix_sid_apply_finish(
+	const struct lyd_node *dnode);
 
 /* Optional 'cli_show' callbacks. */
 void cli_show_router_isis(struct vty *vty, struct lyd_node *dnode,
@@ -465,6 +504,14 @@ void cli_show_isis_mt_ipv6_mgmt(struct vty *vty, struct lyd_node *dnode,
 				bool show_defaults);
 void cli_show_isis_mt_ipv6_dstsrc(struct vty *vty, struct lyd_node *dnode,
 				  bool show_defaults);
+void cli_show_isis_sr_enabled(struct vty *vty, struct lyd_node *dnode,
+			      bool show_defaults);
+void cli_show_isis_srgb(struct vty *vty, struct lyd_node *dnode,
+			bool show_defaults);
+void cli_show_isis_node_msd(struct vty *vty, struct lyd_node *dnode,
+			    bool show_defaults);
+void cli_show_isis_prefix_sid(struct vty *vty, struct lyd_node *dnode,
+			      bool show_defaults);
 void cli_show_ip_isis_passive(struct vty *vty, struct lyd_node *dnode,
 			      bool show_defaults);
 void cli_show_ip_isis_password(struct vty *vty, struct lyd_node *dnode,
