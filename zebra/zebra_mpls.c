@@ -2086,10 +2086,12 @@ zebra_nhlfe_t *zebra_mpls_lsp_add_nhlfe(zebra_lsp_t *lsp,
 					enum nexthop_types_t gtype,
 					union g_addr *gate,
 					ifindex_t ifindex,
-					mpls_label_t out_label)
+					uint8_t num_labels,
+					mpls_label_t out_labels[])
 {
 	/* Just a public pass-through to the internal implementation */
-	return nhlfe_add(lsp, lsp_type, gtype, gate, ifindex, 1, &out_label);
+	return nhlfe_add(lsp, lsp_type, gtype, gate, ifindex, num_labels,
+			 out_labels);
 }
 
 /*

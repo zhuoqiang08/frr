@@ -200,7 +200,8 @@ zebra_nhlfe_t *zebra_mpls_lsp_add_nhlfe(zebra_lsp_t *lsp,
 					enum nexthop_types_t gtype,
 					union g_addr *gate,
 					ifindex_t ifindex,
-					mpls_label_t out_label);
+					uint8_t num_labels,
+					mpls_label_t out_labels[]);
 
 /* Free an allocated NHLFE */
 void zebra_mpls_nhlfe_del(zebra_nhlfe_t *nhlfe);
