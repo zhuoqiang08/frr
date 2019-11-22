@@ -445,6 +445,7 @@ enum nb_client {
 	NB_CLIENT_CONFD,
 	NB_CLIENT_SYSREPO,
 	NB_CLIENT_GRPC,
+	NB_CLIENT_PCEP,
 };
 
 /* Northbound configuration. */
