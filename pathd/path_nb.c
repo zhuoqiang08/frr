@@ -80,6 +80,7 @@ const struct frr_yang_module_info frr_pathd_info = {
 			.xpath = "/frr-pathd:pathd/sr-policy/candidate-path",
 			.cbs = {
 				.create = pathd_te_sr_policy_candidate_path_create,
+                .cli_show = cli_show_te_path_sr_policy_candidate_path,
 				.destroy = pathd_te_sr_policy_candidate_path_destroy,
 			}
 		},
