@@ -2765,7 +2765,7 @@ int mpls_lsp_install(struct zebra_vrf *zvrf, enum lsp_types_t type,
 		/* Clear deleted flag (in case it was set) */
 		UNSET_FLAG(nhlfe->flags, NHLFE_FLAG_DELETED);
 		if (nh->nh_label->num_labels == num_out_labels
-		    || !memcmp(nh->nh_label->label, out_labels,
+		    && !memcmp(nh->nh_label->label, out_labels,
 			       sizeof(mpls_label_t) * num_out_labels))
 			/* No change */
 			return 0;
@@ -2784,8 +2784,14 @@ int mpls_lsp_install(struct zebra_vrf *zvrf, enum lsp_types_t type,
 		}
 
 		/* Update out label, trigger processing. */
-		memcpy(nh->nh_label->label, out_labels,
-		       sizeof(mpls_label_t) * num_out_labels);
+		if (nh->nh_label->num_labels == num_out_labels)
+			memcpy(nh->nh_label->label, out_labels,
+			       sizeof(mpls_label_t) * num_out_labels);
+		else {
+			nexthop_del_labels(nh);
+			nexthop_add_labels(nh, type, num_out_labels,
+					   out_labels);
+		}
 	} else {
 		/* Add LSP entry to this nexthop */
 		nhlfe = nhlfe_add(lsp, type, gtype, gate, ifindex,
