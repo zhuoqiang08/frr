@@ -257,24 +257,12 @@ int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 	return NB_OK;
 }
 
-int pathd_te_sr_policy_candidate_path_protocol_origin_destroy(
-	enum nb_event event, const struct lyd_node *dnode)
-{
-	return NB_OK;
-}
-
 /*
  * XPath: /frr-pathd:pathd/sr-policy/candidate-path/originator
  */
 int pathd_te_sr_policy_candidate_path_originator_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
-{
-	return NB_OK;
-}
-
-int pathd_te_sr_policy_candidate_path_originator_destroy(
-	enum nb_event event, const struct lyd_node *dnode)
 {
 	return NB_OK;
 }
@@ -289,24 +277,12 @@ int pathd_te_sr_policy_candidate_path_dynamic_flag_modify(
 	return NB_OK;
 }
 
-int pathd_te_sr_policy_candidate_path_dynamic_flag_destroy(
-	enum nb_event event, const struct lyd_node *dnode)
-{
-	return NB_OK;
-}
-
 /*
  * XPath: /frr-pathd:pathd/sr-policy/candidate-path/segment-list-name
  */
 int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource)
-{
-	return NB_OK;
-}
-
-int pathd_te_sr_policy_candidate_path_segment_list_name_destroy(
-	enum nb_event event, const struct lyd_node *dnode)
 {
 	return NB_OK;
 }
