@@ -139,7 +139,8 @@ const char *node_names[] = {
 	"protocol",		    // PROTOCOL_NODE,
 	"mpls",			    // MPLS_NODE,
 	"pw",			    // PW_NODE,
-	"te path",		    // TE_PATH_NODE,
+	"segment list",		    // SEGMENT_LIST_NODE,
+	"segment-routing policy",   // SR_POLICY_NODE,
 	"vty",			    // VTY_NODE,
 	"link-params",		    // LINK_PARAMS_NODE,
 	"bgp evpn vni",		    // BGP_EVPN_VNI_NODE,
@@ -1484,7 +1485,8 @@ void cmd_exit(struct vty *vty)
 	case PBRMAP_NODE:
 	case VTY_NODE:
 	case BFD_NODE:
-	case TE_PATH_NODE:
+	case SEGMENT_LIST_NODE:
+	case SR_POLICY_NODE:
 		vty->node = CONFIG_NODE;
 		break;
 	case BGP_IPV4_NODE:
