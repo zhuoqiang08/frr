@@ -97,13 +97,16 @@ int pathd_te_sr_policy_create(enum nb_event event, const struct lyd_node *dnode,
 			      union nb_resource *resource)
 {
 	struct te_sr_policy *te_sr_policy;
-	const char *name;
+	uint32_t color;
+	struct ipaddr endpoint;
 
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	name = yang_dnode_get_string(dnode, "./name");
-	te_sr_policy = te_sr_policy_create(strdup(name));
+	color = yang_dnode_get_uint32(dnode, "./color");
+	yang_dnode_get_ip(&endpoint, dnode, "./endpoint");
+	te_sr_policy = te_sr_policy_create(color, &endpoint);
+
 	nb_running_set_entry(dnode, te_sr_policy);
 
 	return NB_OK;
@@ -124,53 +127,27 @@ int pathd_te_sr_policy_destroy(enum nb_event event,
 }
 
 /*
- * XPath: /frr-pathd:pathd/sr-policy/color
+ * XPath: /frr-pathd:pathd/sr-policy/name
  */
-int pathd_te_sr_policy_color_modify(enum nb_event event,
-				    const struct lyd_node *dnode,
-				    union nb_resource *resource)
+int pathd_te_sr_policy_name_modify(enum nb_event event,
+				   const struct lyd_node *dnode,
+				   union nb_resource *resource)
 {
-	uint32_t color;
+	const char *name;
 	struct te_sr_policy *te_sr_policy;
 
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
 	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
-	color = yang_dnode_get_uint32(dnode, NULL);
-	te_sr_policy_color_add(te_sr_policy, color);
+	name = yang_dnode_get_string(dnode, NULL);
+	te_sr_policy_name_add(te_sr_policy, name);
 
 	return NB_OK;
 }
 
-int pathd_te_sr_policy_color_destroy(enum nb_event event,
-				     const struct lyd_node *dnode)
-{
-	return NB_OK;
-}
-
-/*
- * XPath: /frr-pathd:pathd/sr-policy/endpoint
- */
-int pathd_te_sr_policy_endpoint_modify(enum nb_event event,
-				       const struct lyd_node *dnode,
-				       union nb_resource *resource)
-{
-	struct ipaddr endpoint;
-	struct te_sr_policy *te_sr_policy;
-
-	if (event != NB_EV_APPLY)
-		return NB_OK;
-
-	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
-	yang_dnode_get_ip(&endpoint, dnode, NULL);
-	te_sr_policy_endpoint_add(te_sr_policy, &endpoint);
-
-	return NB_OK;
-}
-
-int pathd_te_sr_policy_endpoint_destroy(enum nb_event event,
-					const struct lyd_node *dnode)
+int pathd_te_sr_policy_name_destroy(enum nb_event event,
+				    const struct lyd_node *dnode)
 {
 	return NB_OK;
 }
