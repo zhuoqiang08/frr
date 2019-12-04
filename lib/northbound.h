@@ -352,6 +352,9 @@ struct nb_callbacks {
 	void (*cli_show)(struct vty *vty, struct lyd_node *dnode,
 			 bool show_defaults);
 
+	void (*cli_show_ext)(struct vty *vty, struct lyd_node *dnode,
+			     bool show_defaults);
+
 	/*
 	 * Optional callback to show the CLI node end for lists or containers.
 	 *

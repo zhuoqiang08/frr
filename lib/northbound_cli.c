@@ -453,8 +453,13 @@ void nb_cli_show_dnode_cmds(struct vty *vty, struct lyd_node *root,
 		struct nb_node *nb_node;
 
 		nb_node = child->schema->priv;
-		if (!nb_node->cbs.cli_show)
+		if (!nb_node->cbs.cli_show && !nb_node->cbs.cli_show_ext)
 			goto next;
+
+		if (nb_node->cbs.cli_show_ext) {
+			(*nb_node->cbs.cli_show_ext)(vty, child, with_defaults);
+			goto next;
+		}
 
 		/* Skip default values. */
 		if (!with_defaults && yang_dnode_is_default_recursive(child))

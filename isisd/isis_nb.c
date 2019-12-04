@@ -446,7 +446,7 @@ const struct frr_yang_module_info frr_isisd_info = {
 		{
 			.xpath = "/frr-isisd:isis/instance/log-adjacency-changes",
 			.cbs = {
-				.cli_show = cli_show_isis_log_adjacency,
+				.cli_show_ext = cli_show_isis_log_adjacency,
 				.modify = isis_instance_log_adjacency_changes_modify,
 			},
 		},

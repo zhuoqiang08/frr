@@ -36,10 +36,16 @@
 #include "isisd/isis_misc.h"
 #include "isisd/isis_circuit.h"
 #include "isisd/isis_csm.h"
+#include "defaults.h"
 
 #ifndef VTYSH_EXTRACT_PL
 #include "isisd/isis_cli_clippy.c"
 #endif
+
+FRR_CFG_DEFAULT_LONG(ISIS_LOG_ADJACENCY_CHANGES,
+       { .val_long = 1, .match_profile = "datacenter", },
+       { .val_long = 0 },
+)
 
 #ifndef FABRICD
 
@@ -65,6 +71,11 @@ DEFPY_NOSH(router_isis, router_isis_cmd, "router isis WORD$tag",
 	if (listcount(isis->area_list) == 0)
 		nb_cli_enqueue_change(vty, "./is-type", NB_OP_MODIFY,
 				      "level-1-2");
+
+	nb_cli_enqueue_change(vty, "./log-adjacency-changes", NB_OP_MODIFY,
+			      DFLT_ISIS_LOG_ADJACENCY_CHANGES
+				  ? "true" : "false");
+
 	ret = nb_cli_apply_changes(vty, base_xpath);
 	if (ret == CMD_SUCCESS)
 		VTY_PUSH_XPATH(ISIS_NODE, base_xpath);
@@ -1963,9 +1974,13 @@ DEFPY(log_adj_changes, log_adj_changes_cmd, "[no] log-adjacency-changes",
 void cli_show_isis_log_adjacency(struct vty *vty, struct lyd_node *dnode,
 				 bool show_defaults)
 {
-	if (!yang_dnode_get_bool(dnode, NULL))
-		vty_out(vty, " no");
-	vty_out(vty, " log-adjacency-changes\n");
+	bool value = yang_dnode_get_bool(dnode, NULL);
+
+	if (value != SAVE_ISIS_LOG_ADJACENCY_CHANGES || show_defaults) {
+		if (!value)
+			vty_out(vty, " no");
+		vty_out(vty, " log-adjacency-changes\n");
+	}
 }
 
 void isis_cli_init(void)
