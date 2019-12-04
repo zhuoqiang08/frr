@@ -53,6 +53,9 @@ int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 					     union nb_resource *resource);
 int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
 					      const struct lyd_node *dnode);
+int pathd_te_sr_policy_candidate_path_name_modify(
+	enum nb_event event, const struct lyd_node *dnode,
+	union nb_resource *resource);
 int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
