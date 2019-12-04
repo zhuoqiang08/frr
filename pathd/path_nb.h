@@ -59,9 +59,9 @@ int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 int pathd_te_sr_policy_candidate_path_originator_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
-int pathd_te_sr_policy_candidate_path_dynamic_flag_modify(
-	enum nb_event event, const struct lyd_node *dnode,
-	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_type_modify(enum nb_event event,
+						  const struct lyd_node *dnode,
+						  union nb_resource *resource);
 int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
