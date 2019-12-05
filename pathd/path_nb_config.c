@@ -59,33 +59,67 @@ int pathd_te_segment_list_destroy(enum nb_event event,
 }
 
 /*
- * XPath: /frr-pathd:pathd/segment-list/label
+ * XPath: /frr-pathd:pathd/segment-list/segment
  */
-int pathd_te_segment_list_label_create(enum nb_event event,
-				       const struct lyd_node *dnode,
-				       union nb_resource *resource)
+int pathd_te_segment_list_segment_create(enum nb_event event,
+					 const struct lyd_node *dnode,
+					 union nb_resource *resource)
 {
-	mpls_label_t label;
 	struct te_segment_list *te_segment_list;
+	struct te_segment_list_segment *te_segment_list_segment;
+	uint32_t index;
 
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
 	te_segment_list = nb_running_get_entry(dnode, NULL, true);
-	label = yang_dnode_get_uint32(dnode, NULL);
-	te_segment_list_label_add(te_segment_list, label);
+	index = yang_dnode_get_uint32(dnode, "./index");
+	te_segment_list_segment =
+		te_segment_list_segment_add(te_segment_list, index);
+	nb_running_set_entry(dnode, te_segment_list_segment);
 
 	return NB_OK;
 }
 
-int pathd_te_segment_list_label_destroy(enum nb_event event,
-					const struct lyd_node *dnode)
+int pathd_te_segment_list_segment_destroy(enum nb_event event,
+					  const struct lyd_node *dnode)
 {
+	struct te_segment_list *te_segment_list;
+	struct te_segment_list_segment *te_segment_list_segment;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	te_segment_list = nb_running_get_entry(dnode, NULL, true);
+	te_segment_list_segment = nb_running_unset_entry(dnode);
+	te_segment_list_segment_del(te_segment_list, te_segment_list_segment);
+
 	return NB_OK;
 }
 
-int pathd_te_segment_list_label_move(enum nb_event event,
-				     const struct lyd_node *dnode)
+/*
+ * XPath: /frr-pathd:pathd/segment-list/segment/sid-value
+ */
+int pathd_te_segment_list_segment_sid_value_modify(enum nb_event event,
+						   const struct lyd_node *dnode,
+						   union nb_resource *resource)
+{
+	mpls_label_t sid_value;
+	struct te_segment_list_segment *te_segment_list_segment;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	te_segment_list_segment = nb_running_get_entry(dnode, NULL, true);
+	sid_value = yang_dnode_get_uint32(dnode, NULL);
+	te_segment_list_segment_sid_value_add(te_segment_list_segment,
+					      sid_value);
+
+	return NB_OK;
+}
+
+int pathd_te_segment_list_segment_sid_value_destroy(
+	enum nb_event event, const struct lyd_node *dnode)
 {
 	return NB_OK;
 }
@@ -226,9 +260,9 @@ int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
 /*
  * XPath: /frr-pathd:pathd/sr-policy/candidate-path/name
  */
-int pathd_te_sr_policy_candidate_path_name_modify(
-	enum nb_event event, const struct lyd_node *dnode,
-	union nb_resource *resource)
+int pathd_te_sr_policy_candidate_path_name_modify(enum nb_event event,
+						  const struct lyd_node *dnode,
+						  union nb_resource *resource)
 {
 	struct te_sr_policy *te_sr_policy;
 	uint32_t preference;
@@ -241,7 +275,7 @@ int pathd_te_sr_policy_candidate_path_name_modify(
 	preference = yang_dnode_get_uint32(dnode, "../preference");
 	name = yang_dnode_get_string(dnode, NULL);
 
-	te_sr_policy_candidate_path_segment_list_name_add(
+	te_sr_policy_candidate_path_name_add(
 		te_sr_policy, preference, strdup(name));
 
 	return NB_OK;

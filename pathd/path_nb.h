@@ -27,13 +27,16 @@ int pathd_te_segment_list_create(enum nb_event event,
 				 union nb_resource *resource);
 int pathd_te_segment_list_destroy(enum nb_event event,
 				  const struct lyd_node *dnode);
-int pathd_te_segment_list_label_move(enum nb_event event,
-				     const struct lyd_node *dnode);
-int pathd_te_segment_list_label_create(enum nb_event event,
-				       const struct lyd_node *dnode,
-				       union nb_resource *resource);
-int pathd_te_segment_list_label_destroy(enum nb_event event,
-					const struct lyd_node *dnode);
+int pathd_te_segment_list_segment_create(enum nb_event event,
+					 const struct lyd_node *dnode,
+					 union nb_resource *resource);
+int pathd_te_segment_list_segment_destroy(enum nb_event event,
+					  const struct lyd_node *dnode);
+int pathd_te_segment_list_segment_sid_value_modify(enum nb_event event,
+						   const struct lyd_node *dnode,
+						   union nb_resource *resource);
+int pathd_te_segment_list_segment_sid_value_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
 int pathd_te_sr_policy_create(enum nb_event event, const struct lyd_node *dnode,
 			      union nb_resource *resource);
 int pathd_te_sr_policy_destroy(enum nb_event event,
@@ -53,9 +56,9 @@ int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 					     union nb_resource *resource);
 int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
 					      const struct lyd_node *dnode);
-int pathd_te_sr_policy_candidate_path_name_modify(
-	enum nb_event event, const struct lyd_node *dnode,
-	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_name_modify(enum nb_event event,
+						  const struct lyd_node *dnode,
+						  union nb_resource *resource);
 int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
@@ -76,9 +79,9 @@ void pathd_te_sr_policy_candidate_path_apply_finish(
 /* Optional 'cli_show' callbacks. */
 void cli_show_te_path_segment_list(struct vty *vty, struct lyd_node *dnode,
 				   bool show_defaults);
-void cli_show_te_path_segment_list_label(struct vty *vty,
-					 struct lyd_node *dnode,
-					 bool show_defaults);
+void cli_show_te_path_segment_list_segment(struct vty *vty,
+					   struct lyd_node *dnode,
+					   bool show_defaults);
 void cli_show_te_path_sr_policy(struct vty *vty, struct lyd_node *dnode,
 				bool show_defaults);
 void cli_show_te_path_sr_policy_name(struct vty *vty, struct lyd_node *dnode,
