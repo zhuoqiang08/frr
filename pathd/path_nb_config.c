@@ -365,3 +365,9 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 
 	return NB_OK;
 }
+
+int pathd_te_sr_policy_candidate_path_segment_list_name_destroy(
+	enum nb_event event, const struct lyd_node *dnode)
+{
+	return NB_OK;
+}

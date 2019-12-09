@@ -94,6 +94,8 @@ int pathd_te_sr_policy_candidate_path_type_modify(enum nb_event event,
 int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
+int pathd_te_sr_policy_candidate_path_segment_list_name_destroy(
+	enum nb_event event, const struct lyd_node *dnode);
 
 /* Optional 'apply_finish' callbacks. */
 void pathd_te_sr_policy_candidate_path_apply_finish(
