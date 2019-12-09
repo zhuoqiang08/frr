@@ -27,6 +27,13 @@ int pathd_te_segment_list_create(enum nb_event event,
 				 union nb_resource *resource);
 int pathd_te_segment_list_destroy(enum nb_event event,
 				  const struct lyd_node *dnode);
+const void *pathd_te_segment_list_get_next(const void *parent_list_entry,
+					   const void *list_entry);
+int pathd_te_segment_list_get_keys(const void *list_entry,
+				   struct yang_list_keys *keys);
+const void *
+pathd_te_segment_list_lookup_entry(const void *parent_list_entry,
+				   const struct yang_list_keys *keys);
 int pathd_te_segment_list_segment_create(enum nb_event event,
 					 const struct lyd_node *dnode,
 					 union nb_resource *resource);
