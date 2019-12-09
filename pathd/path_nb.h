@@ -41,6 +41,12 @@ int pathd_te_sr_policy_create(enum nb_event event, const struct lyd_node *dnode,
 			      union nb_resource *resource);
 int pathd_te_sr_policy_destroy(enum nb_event event,
 			       const struct lyd_node *dnode);
+const void *pathd_te_sr_policy_get_next(const void *parent_list_entry,
+					const void *list_entry);
+int pathd_te_sr_policy_get_keys(const void *list_entry,
+				struct yang_list_keys *keys);
+const void *pathd_te_sr_policy_lookup_entry(const void *parent_list_entry,
+					    const struct yang_list_keys *keys);
 int pathd_te_sr_policy_name_modify(enum nb_event event,
 				   const struct lyd_node *dnode,
 				   union nb_resource *resource);
@@ -56,9 +62,19 @@ int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 					     union nb_resource *resource);
 int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
 					      const struct lyd_node *dnode);
+const void *
+pathd_te_sr_policy_candidate_path_get_next(const void *parent_list_entry,
+					   const void *list_entry);
+int pathd_te_sr_policy_candidate_path_get_keys(const void *list_entry,
+					       struct yang_list_keys *keys);
+const void *pathd_te_sr_policy_candidate_path_lookup_entry(
+	const void *parent_list_entry, const struct yang_list_keys *keys);
 int pathd_te_sr_policy_candidate_path_name_modify(enum nb_event event,
 						  const struct lyd_node *dnode,
 						  union nb_resource *resource);
+struct yang_data *
+pathd_te_sr_policy_candidate_path_is_best_candidate_path_get_elem(
+	const char *xpath, const void *list_entry);
 int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 	enum nb_event event, const struct lyd_node *dnode,
 	union nb_resource *resource);
