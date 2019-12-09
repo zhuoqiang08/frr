@@ -2865,16 +2865,16 @@ int netlink_macfdb_read_specific_mac(struct zebra_ns *zns,
 /*
  * Netlink-specific handler for MAC updates using dataplane context object.
  */
-static enum zebra_dplane_result
-netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx)
+ssize_t
+netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, uint8_t *data,
+			  size_t datalen)
 {
 	uint8_t protocol = RTPROT_ZEBRA;
 	struct {
 		struct nlmsghdr n;
 		struct ndmsg ndm;
-		char buf[256];
-	} req;
-	int ret;
+		char buf[];
+	} *req = (void *)data;
 	int dst_alen;
 	int vid_present = 0;
 	int cmd;
@@ -2886,39 +2886,38 @@ netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx)
 	else
 		cmd = RTM_DELNEIGH;
 
-	memset(&req, 0, sizeof(req));
+	memset(data, 0, datalen);
 
-	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST;
+	req->n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg));
+	req->n.nlmsg_flags = NLM_F_REQUEST;
 	if (cmd == RTM_NEWNEIGH)
-		req.n.nlmsg_flags |= (NLM_F_CREATE | NLM_F_REPLACE);
-	req.n.nlmsg_type = cmd;
-	req.ndm.ndm_family = AF_BRIDGE;
-	req.ndm.ndm_flags |= NTF_SELF | NTF_MASTER;
-	req.ndm.ndm_state = NUD_REACHABLE;
+		req->n.nlmsg_flags |= (NLM_F_CREATE | NLM_F_REPLACE);
+	req->n.nlmsg_type = cmd;
+	req->ndm.ndm_family = AF_BRIDGE;
+	req->ndm.ndm_flags |= NTF_SELF | NTF_MASTER;
+	req->ndm.ndm_state = NUD_REACHABLE;
 
 	if (dplane_ctx_mac_is_sticky(ctx))
-		req.ndm.ndm_state |= NUD_NOARP;
+		req->ndm.ndm_state |= NUD_NOARP;
 	else
-		req.ndm.ndm_flags |= NTF_EXT_LEARNED;
+		req->ndm.ndm_flags |= NTF_EXT_LEARNED;
 
-	addattr_l(&req.n, sizeof(req),
-		  NDA_PROTOCOL, &protocol, sizeof(protocol));
-	addattr_l(&req.n, sizeof(req), NDA_LLADDR,
-		  dplane_ctx_mac_get_addr(ctx), 6);
-	req.ndm.ndm_ifindex = dplane_ctx_get_ifindex(ctx);
+	addattr_l(&req->n, datalen, NDA_PROTOCOL, &protocol, sizeof(protocol));
+	addattr_l(&req->n, datalen, NDA_LLADDR, dplane_ctx_mac_get_addr(ctx),
+		  6);
+	req->ndm.ndm_ifindex = dplane_ctx_get_ifindex(ctx);
 
 	dst_alen = 4; // TODO: hardcoded
 	vtep_ip = *(dplane_ctx_mac_get_vtep_ip(ctx));
-	addattr_l(&req.n, sizeof(req), NDA_DST, &vtep_ip, dst_alen);
+	addattr_l(&req->n, datalen, NDA_DST, &vtep_ip, dst_alen);
 
 	vid = dplane_ctx_mac_get_vlan(ctx);
 
 	if (vid > 0) {
-		addattr16(&req.n, sizeof(req), NDA_VLAN, vid);
+		addattr16(&req->n, datalen, NDA_VLAN, vid);
 		vid_present = 1;
 	}
-	addattr32(&req.n, sizeof(req), NDA_MASTER,
+	addattr32(&req->n, datalen, NDA_MASTER,
 		  dplane_ctx_mac_get_br_ifindex(ctx));
 
 	if (IS_ZEBRA_DEBUG_KERNEL) {
@@ -2938,19 +2937,14 @@ netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx)
 
 		zlog_debug("Tx %s family %s IF %s(%u)%s %sMAC %s%s",
 			   nl_msg_type_to_str(cmd),
-			   nl_family_to_str(req.ndm.ndm_family),
+			   nl_family_to_str(req->ndm.ndm_family),
 			   dplane_ctx_get_ifname(ctx),
 			   dplane_ctx_get_ifindex(ctx), vid_buf,
 			   dplane_ctx_mac_is_sticky(ctx) ? "sticky " : "",
 			   buf, dst_buf);
 	}
 
-	ret = netlink_talk_info(netlink_talk_filter, &req.n,
-				dplane_ctx_get_ns(ctx), 0);
-	if (ret == 0)
-		return ZEBRA_DPLANE_REQUEST_SUCCESS;
-	else
-		return ZEBRA_DPLANE_REQUEST_FAILURE;
+	return NLMSG_ALIGN(req->n.nlmsg_len);
 }
 
 /*
@@ -3384,7 +3378,18 @@ static int netlink_neigh_update_ctx(const struct zebra_dplane_ctx *ctx,
  */
 enum zebra_dplane_result kernel_mac_update_ctx(struct zebra_dplane_ctx *ctx)
 {
-	return netlink_macfdb_update_ctx(ctx);
+	uint8_t nl_buf[NL_PKT_BUF_SIZE];
+	ssize_t rv;
+
+	rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf));
+	if (rv <= 0)
+		return ZEBRA_DPLANE_REQUEST_FAILURE;
+
+	rv = netlink_talk_info(netlink_talk_filter, (struct nlmsghdr *)nl_buf,
+				dplane_ctx_get_ns(ctx), 0);
+
+	return rv == 0 ?
+		ZEBRA_DPLANE_REQUEST_SUCCESS : ZEBRA_DPLANE_REQUEST_FAILURE;
 }
 
 enum zebra_dplane_result kernel_neigh_update_ctx(struct zebra_dplane_ctx *ctx)
