@@ -119,6 +119,30 @@ static inline void ipv4_mapped_ipv6_to_ipv4(struct in6_addr *in6,
 	memcpy(in, (char *)in6 + 12, sizeof(struct in_addr));
 }
 
+/*
+ * generic ordering comparison between IP addresses
+ */
+static inline int ipaddr_cmp(const struct ipaddr *a, const struct ipaddr *b)
+{
+	uint32_t va, vb;
+	va = a->ipa_type;
+	vb = b->ipa_type;
+	if (va != vb) return (va < vb) ? -1 : 1;
+	switch (a->ipa_type) {
+		case IPADDR_V4:
+			va = ntohl(a->ipaddr_v4.s_addr);
+			vb = ntohl(b->ipaddr_v4.s_addr);
+			if (va != vb) return (va < vb) ?  -1 : 1;
+			return 0;
+		case IPADDR_V6:
+			return memcmp((void*)&a->ipaddr_v6,
+			              (void*)&b->ipaddr_v6,
+			              sizeof(a->ipaddr_v6));
+		default:
+			return 0;
+	}
+}
+
 #ifdef __cplusplus
 }
 #endif
