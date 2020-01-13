@@ -3828,7 +3828,7 @@ static int zvni_mac_install(zebra_vni_t *zvni, zebra_mac_t *mac)
 	else
 		vid = 0;
 
-	res = dplane_mac_add(zvni->vxlan_if, br_ifp, vid,
+	res = dplane_mac_add(zvni->vxlan_if, br_ifp, vid, VNI_NONE,
 			     &mac->macaddr, mac->fwd_info.r_vtep_ip, sticky);
 	if (res != ZEBRA_DPLANE_REQUEST_FAILURE)
 		return 0;
@@ -4618,7 +4618,7 @@ static int zl3vni_rmac_install(zebra_l3vni_t *zl3vni, zebra_mac_t *zrmac)
 	else
 		vid = 0;
 
-	res = dplane_mac_add(zl3vni->vxlan_if, br_ifp, vid,
+	res = dplane_mac_add(zl3vni->vxlan_if, br_ifp, vid, zl3vni->vni,
 			     &zrmac->macaddr, zrmac->fwd_info.r_vtep_ip, 0);
 	if (res != ZEBRA_DPLANE_REQUEST_FAILURE)
 		return 0;

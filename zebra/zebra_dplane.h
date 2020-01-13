@@ -353,6 +353,7 @@ const struct ethaddr *dplane_ctx_mac_get_addr(
 const struct in_addr *dplane_ctx_mac_get_vtep_ip(
 	const struct zebra_dplane_ctx *ctx);
 ifindex_t dplane_ctx_mac_get_br_ifindex(const struct zebra_dplane_ctx *ctx);
+vni_t dplane_ctx_mac_get_vni(const struct zebra_dplane_ctx *ctx);
 
 /* Accessors for neighbor information */
 const struct ipaddr *dplane_ctx_neigh_get_ipaddr(
@@ -444,7 +445,7 @@ extern struct zebra_dplane_ctx *mac_update_internal(
 
 enum zebra_dplane_result dplane_mac_add(const struct interface *ifp,
 					const struct interface *bridge_ifp,
-					vlanid_t vid,
+					vlanid_t vid, vni_t vni,
 					const struct ethaddr *mac,
 					struct in_addr vtep_ip,
 					bool sticky);
@@ -459,7 +460,7 @@ enum zebra_dplane_result dplane_mac_del(const struct interface *ifp,
 void dplane_mac_init(struct zebra_dplane_ctx *ctx,
 		     const struct interface *ifp,
 		     const struct interface *br_ifp,
-		     vlanid_t vid,
+		     vlanid_t vid, vni_t vni,
 		     const struct ethaddr *mac,
 		     struct in_addr vtep_ip,
 		     bool sticky);

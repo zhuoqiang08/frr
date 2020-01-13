@@ -655,7 +655,8 @@ static int fpm_nl_enqueue(struct fpm_nl_ctx *fnc, struct zebra_dplane_ctx *ctx)
 
 	case DPLANE_OP_MAC_INSTALL:
 	case DPLANE_OP_MAC_DELETE:
-		rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf));
+		rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf),
+					       true);
 		if (rv <= 0) {
 			zlog_debug("%s: netlink_macfdb_update_ctx failed",
 				   __func__);
@@ -829,8 +830,8 @@ static void fpm_enqueue_rmac_table(struct hash_backet *backet, void *arg)
 	dplane_ctx_reset(fra->ctx);
 	dplane_ctx_set_op(fra->ctx, DPLANE_OP_MAC_INSTALL);
 	dplane_mac_init(fra->ctx, fra->zl3vni->vxlan_if,
-			zif->brslave_info.br_if, vid, &zrmac->macaddr,
-			zrmac->fwd_info.r_vtep_ip, sticky);
+			zif->brslave_info.br_if, vid, fra->zl3vni->vni,
+			&zrmac->macaddr, zrmac->fwd_info.r_vtep_ip, sticky);
 	if (fpm_nl_enqueue(fra->fnc, fra->ctx) == -1) {
 		thread_add_timer(zrouter.master, fpm_rmac_send,
 				 fra->fnc, 1, &fra->fnc->t_rmacwalk);
