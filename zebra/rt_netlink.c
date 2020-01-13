@@ -2867,7 +2867,7 @@ int netlink_macfdb_read_specific_mac(struct zebra_ns *zns,
  */
 ssize_t
 netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, uint8_t *data,
-			  size_t datalen)
+			  size_t datalen, bool incvni)
 {
 	uint8_t protocol = RTPROT_ZEBRA;
 	struct {
@@ -2880,6 +2880,8 @@ netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, uint8_t *data,
 	int cmd;
 	struct in_addr vtep_ip;
 	vlanid_t vid;
+	struct rtattr *nest;
+	uint16_t encaptype;
 
 	if (dplane_ctx_get_op(ctx) == DPLANE_OP_MAC_INSTALL)
 		cmd = RTM_NEWNEIGH;
@@ -2919,6 +2921,17 @@ netlink_macfdb_update_ctx(struct zebra_dplane_ctx *ctx, uint8_t *data,
 	}
 	addattr32(&req->n, datalen, NDA_MASTER,
 		  dplane_ctx_mac_get_br_ifindex(ctx));
+
+	if (incvni && dplane_ctx_mac_get_vni(ctx) != VNI_NONE) {
+		encaptype = 100 /* FPM_NH_ENCAP_VXLAN */;
+		addattr_l(&req->n, datalen, RTA_ENCAP_TYPE, &encaptype,
+			  sizeof(uint16_t));
+
+		nest = addattr_nest(&req->n, datalen, RTA_ENCAP);
+		addattr32(&req->n, datalen, 0 /* VXLAN_VNI */,
+			  dplane_ctx_mac_get_vni(ctx));
+		addattr_nest_end(&req->n, nest);
+	}
 
 	if (IS_ZEBRA_DEBUG_KERNEL) {
 		char ipbuf[PREFIX_STRLEN];
@@ -3381,7 +3394,7 @@ enum zebra_dplane_result kernel_mac_update_ctx(struct zebra_dplane_ctx *ctx)
 	uint8_t nl_buf[NL_PKT_BUF_SIZE];
 	ssize_t rv;
 
-	rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf));
+	rv = netlink_macfdb_update_ctx(ctx, nl_buf, sizeof(nl_buf), false);
 	if (rv <= 0)
 		return ZEBRA_DPLANE_REQUEST_FAILURE;
 

@@ -29,6 +29,7 @@ extern "C" {
 /* VxLAN Network Identifier - 24-bit (RFC 7348) */
 typedef uint32_t vni_t;
 #define VNI_MAX 16777215 /* (2^24 - 1) */
+#define VNI_NONE 16777216 /* VNI not in use. */
 
 /* Flooding mechanisms for BUM packets. */
 /* Currently supported mechanisms are head-end (ingress) replication
