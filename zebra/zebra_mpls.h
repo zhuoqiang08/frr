@@ -33,6 +33,7 @@
 #include "mpls.h"
 #include "zebra/zserv.h"
 #include "zebra/zebra_vrf.h"
+#include "hook.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +55,11 @@ typedef struct zebra_slsp_t_ zebra_slsp_t;
 typedef struct zebra_nhlfe_t_ zebra_nhlfe_t;
 typedef struct zebra_lsp_t_ zebra_lsp_t;
 typedef struct zebra_fec_t_ zebra_fec_t;
+
+/* Hooks */
+
+DECLARE_HOOK(zebra_mpls_label_created, (mpls_label_t label), (label))
+DECLARE_HOOK(zebra_mpls_label_removed, (mpls_label_t label), (label))
 
 /*
  * (Outgoing) nexthop label forwarding entry configuration
@@ -165,6 +171,10 @@ struct zebra_fec_t_ {
 };
 
 /* Function declarations. */
+
+/* Trigger hooks for label updates */
+void zebra_mpls_label_created(mpls_label_t label);
+void zebra_mpls_label_removed(mpls_label_t label);
 
 /*
  * Add/update global label block.

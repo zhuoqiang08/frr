@@ -2116,6 +2116,8 @@ enum zebra_dplane_result dplane_lsp_add(zebra_lsp_t *lsp)
 	enum zebra_dplane_result ret =
 		lsp_update_internal(lsp, DPLANE_OP_LSP_INSTALL);
 
+	zebra_mpls_label_created(lsp->ile.in_label);
+
 	return ret;
 }
 
@@ -2137,6 +2139,8 @@ enum zebra_dplane_result dplane_lsp_delete(zebra_lsp_t *lsp)
 {
 	enum zebra_dplane_result ret =
 		lsp_update_internal(lsp, DPLANE_OP_LSP_DELETE);
+
+	zebra_mpls_label_removed(lsp->ile.in_label);
 
 	return ret;
 }

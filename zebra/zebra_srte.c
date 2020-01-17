@@ -67,8 +67,8 @@ void zebra_sr_policy_set(struct zapi_sr_policy *zapi_sr_policy,
 		zapi_sr_policy->active_segment_list;
 	zebra_sr_policy->zvrf = zvrf;
 
-	RB_REMOVE(zebra_sr_policy_instance_head,
-		  &zebra_sr_policy_instances, zebra_sr_policy);
+	RB_REMOVE(zebra_sr_policy_instance_head, &zebra_sr_policy_instances,
+		  zebra_sr_policy);
 
 	RB_INSERT(zebra_sr_policy_instance_head, &zebra_sr_policy_instances,
 		  zebra_sr_policy);
@@ -89,7 +89,7 @@ void zebra_sr_policy_delete(struct zapi_sr_policy *zapi_sr_policy)
 		  &zebra_sr_policy);
 }
 
-static void zebra_sr_policy_process_label_update(
+static int zebra_sr_policy_process_label_update(
 	mpls_label_t label, enum zebra_sr_policy_update_label_mode mode)
 {
 	struct zebra_sr_policy *sr_policy;
@@ -127,16 +127,26 @@ static void zebra_sr_policy_process_label_update(
 			}
 		}
 	}
+
+	return 0;
 }
 
-void zebra_sr_policy_nexthop_label_removed(mpls_label_t label)
+static int zebra_sr_policy_nexthop_label_removed(mpls_label_t label)
 {
-	zebra_sr_policy_process_label_update(label,
-					     ZEBRA_SR_POLICY_LABEL_REMOVED);
+	return zebra_sr_policy_process_label_update(
+		label, ZEBRA_SR_POLICY_LABEL_REMOVED);
 }
 
-void zebra_sr_policy_nexthop_label_created(mpls_label_t label)
+static int zebra_sr_policy_nexthop_label_created(mpls_label_t label)
 {
-	zebra_sr_policy_process_label_update(label,
-					     ZEBRA_SR_POLICY_LABEL_CREATED);
+	return zebra_sr_policy_process_label_update(
+		label, ZEBRA_SR_POLICY_LABEL_CREATED);
+}
+
+void zebra_srte_init(void)
+{
+	hook_register(zebra_mpls_label_created,
+		      zebra_sr_policy_nexthop_label_created);
+	hook_register(zebra_mpls_label_removed,
+		      zebra_sr_policy_nexthop_label_removed);
 }
