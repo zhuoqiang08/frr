@@ -59,6 +59,7 @@ typedef struct zebra_fec_t_ zebra_fec_t;
 /* Hooks */
 
 DECLARE_HOOK(zebra_mpls_label_created, (mpls_label_t label), (label))
+DECLARE_HOOK(zebra_mpls_label_updated, (mpls_label_t label), (label))
 DECLARE_HOOK(zebra_mpls_label_removed, (mpls_label_t label), (label))
 
 /*
@@ -174,6 +175,7 @@ struct zebra_fec_t_ {
 
 /* Trigger hooks for label updates */
 void zebra_mpls_label_created(mpls_label_t label);
+void zebra_mpls_label_updated(mpls_label_t label);
 void zebra_mpls_label_removed(mpls_label_t label);
 
 /*
