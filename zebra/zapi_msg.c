@@ -1900,12 +1900,8 @@ static void zread_sr_policy_set(ZAPI_HANDLER_ARGS)
 {
 	struct stream *s;
 	struct zapi_sr_policy zp;
-	zebra_lsp_t *lsp;
-	zebra_nhlfe_t *nhlfe;
 	struct zapi_srte_tunnel *zt;
-	int ret;
-
-	zt = &zp.active_segment_list;
+	struct zebra_sr_policy *policy;
 
 	/* Get input stream.  */
 	s = msg;
@@ -1915,6 +1911,7 @@ static void zread_sr_policy_set(ZAPI_HANDLER_ARGS)
 				   __PRETTY_FUNCTION__);
 		return;
 	}
+	zt = &zp.active_segment_list;
 	if (zt->label_num < 1) {
 		if (IS_ZEBRA_DEBUG_RECV)
 			zlog_debug(
@@ -1926,35 +1923,23 @@ static void zread_sr_policy_set(ZAPI_HANDLER_ARGS)
 	if (!mpls_enabled)
 		return;
 
-	mpls_lsp_uninstall_all_vrf(zvrf, zt->type, zt->local_label);
+	policy = zebra_sr_policy_find(zp.color, zp.endpoint);
+	if (!policy)
+		policy = zebra_sr_policy_add(zp.color, zp.endpoint);
+	strlcpy(policy->name, zp.name, sizeof(policy->name));
+	policy->active_segment_list = zp.active_segment_list;
+	policy->status = ZEBRA_SR_POLICY_UNKNOWN;
+	/* TODO: per-VRF list of SR-TE policies. */
+	policy->zvrf = zvrf;
 
-	lsp = mpls_lsp_find(zvrf, zt->labels[0]);
-	if (!lsp) {
-		/* If the nexthop can't be resolved the tunnel is not installed */
-		zebra_sr_policy_set(&zp, zvrf, ZEBRA_SR_POLICY_DOWN);
-		return;
-	}
-
-	for (nhlfe = lsp->nhlfe_list; nhlfe; nhlfe = nhlfe->next) {
-		ret = mpls_lsp_install(zvrf, zt->type, zt->local_label,
-					zt->label_num, zt->labels, nhlfe->nexthop->type,
-					&nhlfe->nexthop->gate, nhlfe->nexthop->ifindex);
-		if (ret) {
-			zebra_sr_policy_set(&zp, zvrf, ZEBRA_SR_POLICY_DOWN);
-			return;
-		}
-	}
-
-	zebra_sr_policy_set(&zp, zvrf, ZEBRA_SR_POLICY_UP);
+	zebra_sr_policy_install(policy);
 }
 
 static void zread_sr_policy_delete(ZAPI_HANDLER_ARGS)
 {
 	struct stream *s;
 	struct zapi_sr_policy zp;
-	struct zapi_srte_tunnel *zt;
-
-	zt = &zp.active_segment_list;
+	struct zebra_sr_policy *policy;
 
 	/* Get input stream.  */
 	s = msg;
@@ -1968,8 +1953,15 @@ static void zread_sr_policy_delete(ZAPI_HANDLER_ARGS)
 	if (!mpls_enabled)
 		return;
 
-	mpls_lsp_uninstall_all_vrf(zvrf, zt->type, zt->local_label);
-	zebra_sr_policy_delete(&zp);
+	policy = zebra_sr_policy_find(zp.color, zp.endpoint);
+	if (!policy) {
+		if (IS_ZEBRA_DEBUG_RECV)
+			zlog_debug("%s: Unable to find SR-TE policy",
+				   __PRETTY_FUNCTION__);
+		return;
+	}
+
+	zebra_sr_policy_del(policy);
 }
 
 /* Send response to a table manager connect request to client */
