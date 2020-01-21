@@ -38,7 +38,7 @@ int pathd_te_segment_list_create(enum nb_event event,
 		return NB_OK;
 
 	name = yang_dnode_get_string(dnode, "./name");
-	te_segment_list = te_segment_list_create(strdup(name));
+	te_segment_list = te_segment_list_create(name);
 	nb_running_set_entry(dnode, te_segment_list);
 
 	return NB_OK;
@@ -175,9 +175,7 @@ int pathd_te_sr_policy_name_modify(enum nb_event event,
 
 	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
 	name = yang_dnode_get_string(dnode, NULL);
-	if (te_sr_policy->name)
-		free(te_sr_policy->name);
-	te_sr_policy_name_add(te_sr_policy, strdup(name));
+	te_sr_policy_name_set(te_sr_policy, name);
 
 	return NB_OK;
 }
@@ -191,7 +189,7 @@ int pathd_te_sr_policy_name_destroy(enum nb_event event,
 		return NB_OK;
 
 	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
-	free(te_sr_policy->name);
+	te_sr_policy_name_unset(te_sr_policy);
 
 	return NB_OK;
 }
@@ -285,10 +283,7 @@ int pathd_te_sr_policy_candidate_path_name_modify(enum nb_event event,
 
 	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	name = yang_dnode_get_string(dnode, NULL);
-
-	if (te_candidate_path->name)
-		free(te_candidate_path->name);
-	te_sr_policy_candidate_path_name_add(te_candidate_path, strdup(name));
+	te_sr_policy_candidate_path_name_set(te_candidate_path, name);
 
 	return NB_OK;
 }
@@ -395,11 +390,8 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 
 	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	segment_list_name = yang_dnode_get_string(dnode, NULL);
-
-	if (te_candidate_path->segment_list_name)
-		free(te_candidate_path->segment_list_name);
-	te_sr_policy_candidate_path_segment_list_name_add(
-		te_candidate_path, strdup(segment_list_name));
+	te_sr_policy_candidate_path_segment_list_name_set(te_candidate_path,
+							  segment_list_name);
 
 	return NB_OK;
 }
