@@ -226,7 +226,7 @@ int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_sr_policy = nb_running_get_entry(dnode, "..", true);
+	te_sr_policy = nb_running_get_entry(dnode, NULL, true);
 	preference = yang_dnode_get_uint32(dnode, "./preference");
 	te_candidate_path =
 		te_sr_policy_candidate_path_add(te_sr_policy, preference);
@@ -273,7 +273,7 @@ int pathd_te_sr_policy_candidate_path_name_modify(enum nb_event event,
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_candidate_path = nb_running_get_entry(dnode, "..", true);
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	name = yang_dnode_get_string(dnode, NULL);
 
 	te_sr_policy_candidate_path_name_add(te_candidate_path, strdup(name));
@@ -294,7 +294,7 @@ int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_candidate_path = nb_running_get_entry(dnode, "..", true);
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	protocol_origin = yang_dnode_get_enum(dnode, NULL);
 
 	te_sr_policy_candidate_path_protocol_origin_add(te_candidate_path,
@@ -316,7 +316,7 @@ int pathd_te_sr_policy_candidate_path_originator_modify(
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_candidate_path = nb_running_get_entry(dnode, "..", true);
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	yang_dnode_get_ip(&originator, dnode, NULL);
 
 	te_sr_policy_candidate_path_originator_add(te_candidate_path,
@@ -338,7 +338,7 @@ int pathd_te_sr_policy_candidate_path_discriminator_modify(
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_candidate_path = nb_running_get_entry(dnode, "..", true);
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	discriminator = yang_dnode_get_uint32(dnode, NULL);
 
 	te_sr_policy_candidate_path_discriminator_add(te_candidate_path,
@@ -360,7 +360,7 @@ int pathd_te_sr_policy_candidate_path_type_modify(enum nb_event event,
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_candidate_path = nb_running_get_entry(dnode, "..", true);
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	type = yang_dnode_get_enum(dnode, NULL);
 
 	te_sr_policy_candidate_path_type_add(te_candidate_path, type);
@@ -381,7 +381,7 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	te_candidate_path = nb_running_get_entry(dnode, "..", true);
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	segment_list_name = yang_dnode_get_string(dnode, NULL);
 
 	te_sr_policy_candidate_path_segment_list_name_add(
