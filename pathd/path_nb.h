@@ -64,6 +64,9 @@ int pathd_te_sr_policy_binding_sid_modify(enum nb_event event,
 					  union nb_resource *resource);
 int pathd_te_sr_policy_binding_sid_destroy(enum nb_event event,
 					   const struct lyd_node *dnode);
+struct yang_data *
+pathd_te_sr_policy_is_operational_get_elem(const char *xpath,
+					   const void *list_entry);
 int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 					     const struct lyd_node *dnode,
 					     union nb_resource *resource);
