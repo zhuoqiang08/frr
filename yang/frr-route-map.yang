@@ -38,6 +38,74 @@ module frr-route-map {
     type string;
   }
 
+  identity rmap-match-type {
+    description "Base route-map match-condition";
+  }
+  identity interface {
+    base rmap-match-type;
+    description "Match interface";
+  }
+  identity ipv4-address-list {
+    base rmap-match-type;
+    description "Match an IPv4 access-list";
+  }
+  identity ipv4-prefix-list {
+    base rmap-match-type;
+    description "Match an IPv4 prefix-list";
+  }
+  identity ipv4-next-hop-list {
+    base rmap-match-type;
+    description "Match an IPv4 next-hop";
+  }
+  identity ipv4-next-hop-prefix-list {
+    base rmap-match-type;
+    description "Match an IPv4 next-hop prefix list";
+  }
+  identity ipv4-next-hop-type {
+    base rmap-match-type;
+    description "Match an IPv4 next-hop type";
+  }
+  identity ipv6-address-list {
+    base rmap-match-type;
+    description "Match an IPv6 access-list";
+  }
+  identity ipv6-prefix-list {
+    base rmap-match-type;
+    description "Match an IPv6 prefix-list";
+  }
+  identity ipv6-next-hop-type {
+    base rmap-match-type;
+    description "Match an IPv6 next-hop type";
+  }
+  identity match-metric {
+    base rmap-match-type;
+    description "Match a route metric";
+  }
+  identity match-tag {
+    base rmap-match-type;
+    description "Match a route tag";
+  }
+
+  identity rmap-set-type {
+    description "Base route-map set-action";
+  }
+  identity ipv4-next-hop {
+    base rmap-set-type;
+    description "Set IPv4 address of the next hop";
+  }
+  identity ipv6-next-hop {
+    base rmap-set-type;
+    description "Set IPv6 address of the next hop";
+  }
+  identity set-metric {
+    base rmap-set-type;
+    description "Set prefix/route metric";
+  }
+  identity set-tag {
+    base rmap-set-type;
+    description "Set tag";
+  }
+
   /*
    * Operational data.
    */
@@ -134,102 +202,48 @@ module frr-route-map {
 
           leaf condition {
             description "Match condition";
-            type enumeration {
-              enum interface {
-                description "Match interface";
-                value 0;
-              }
-              enum ipv4-address-list {
-                description "Match an IPv4 access-list";
-                value 1;
-              }
-              enum ipv4-prefix-list {
-                description "Match an IPv4 prefix-list";
-                value 2;
-              }
-              enum ipv4-next-hop-list {
-                description "Match an IPv4 next-hop";
-                value 3;
-              }
-              enum ipv4-next-hop-prefix-list {
-                description "Match an IPv4 next-hop prefix list";
-                value 4;
-              }
-              enum ipv4-next-hop-type {
-                description "Match an IPv4 next-hop type";
-                value 5;
-              }
-              enum ipv6-address-list {
-                description "Match an IPv6 access-list";
-                value 6;
-              }
-              enum ipv6-prefix-list {
-                description "Match an IPv6 prefix-list";
-                value 7;
-              }
-              enum ipv6-next-hop-type {
-                description "Match an IPv6 next-hop type";
-                value 8;
-              }
-              enum metric {
-                description "Match a route metric";
-                value 9;
-              }
-              enum tag {
-                description "Match a route tag";
-                value 10;
-              }
-
-              /*
-               * Protocol YANG models should augment the parent node to
-               * contain the routing protocol specific value. The protocol
-               * must also augment `condition-value` to include its specific
-               * values or expand the `when` statement on the existing cases.
-               */
-              enum routing-protocol-specific {
-                description "Match a routing protocol specific type";
-                value 100;
-              }
+            type identityref {
+              base rmap-match-type;
             }
           }
 
-          choice condition-value {
+          choice match-condition {
             description
               "Value to match (interpretation depends on condition type)";
             mandatory true;
             case interface {
-              when "./condition = 'interface'";
+              when "derived-from-or-self(./condition, 'interface')";
               leaf interface {
                 type frr-interface:interface-ref;
               }
             }
             case access-list-num {
-              when "./condition = 'ipv4-address-list' or
-                    ./condition = 'ipv4-next-hop-list'";
+              when "derived-from-or-self(./condition, 'ipv4-address-list') or
+                    derived-from-or-self(./condition, 'ipv4-next-hop-list')";
               leaf access-list-num {
                 type filter:access-list-standard;
               }
             }
             case access-list-num-extended {
-              when "./condition = 'ipv4-address-list' or
-                    ./condition = 'ipv4-next-hop-list'";
+              when "derived-from-or-self(./condition, 'ipv4-address-list') or
+                    derived-from-or-self(./condition, 'ipv4-next-hop-list')";
               leaf access-list-num-extended {
                 type filter:access-list-extended;
               }
             }
             case list-name {
-              when "./condition = 'ipv4-address-list' or
-                    ./condition = 'ipv4-prefix-list' or
-                    ./condition = 'ipv4-next-hop-list' or
-                    ./condition = 'ipv4-next-hop-prefix-list' or
-                    ./condition = 'ipv6-address-list' or
-                    ./condition = 'ipv6-prefix-list'";
+              when "derived-from-or-self(./condition, 'ipv4-address-list') or
+                    derived-from-or-self(./condition, 'ipv4-prefix-list') or
+                    derived-from-or-self(./condition, 'ipv4-next-hop-list') or
+                    derived-from-or-self(./condition, 'ipv4-next-hop-prefix-list') or
+                    derived-from-or-self(./condition, 'ipv6-address-list') or
+                    derived-from-or-self(./condition, 'ipv6-prefix-list')";
               leaf list-name {
                 type filter:access-list-name;
               }
             }
             case ipv4-next-hop-type {
-              when "./condition = 'ipv4-next-hop-type'";
+              when "derived-from-or-self(./condition, 'ipv4-next-hop-type')";
               leaf ipv4-next-hop-type {
                 type enumeration {
                   enum blackhole {
@@ -238,8 +252,8 @@ module frr-route-map {
                 }
               }
             }
-            case ipv6-next-hop-type {
-              when "./condition = 'ipv6-next-hop-type'";
+            case ipv6-nexthop-type {
+              when "derived-from-or-self(./condition, 'ipv6-next-hop-type')";
               leaf ipv6-next-hop-type {
                 type enumeration {
                   enum blackhole {
@@ -248,8 +262,8 @@ module frr-route-map {
                 }
               }
             }
-            case metric {
-              when "./condition = 'metric'";
+            case match-metric {
+              when "derived-from-or-self(./condition, 'match-metric')";
               leaf metric {
                 type uint32 {
                   range "1..4294967295";
@@ -257,7 +271,7 @@ module frr-route-map {
               }
             }
             case tag {
-              when "./condition = 'tag'";
+              when "derived-from-or-self(./condition, 'match-tag')";
               leaf tag {
                 type uint32 {
                   range "1..4294967295";
@@ -274,56 +288,29 @@ module frr-route-map {
 
           leaf action {
             description "Action to do when the route map matches";
-            type enumeration {
-              enum ipv4-next-hop {
-                description "Set IPv4 address of the next hop";
-                value 0;
-              }
-              enum ipv6-next-hop {
-                description "Set IPv6 address of the next hop";
-                value 1;
-              }
-              enum metric {
-                description "Set prefix/route metric";
-                value 2;
-              }
-              enum tag {
-                description "Set tag";
-                value 3;
-              }
-
-              /*
-               * Protocol YANG models should augment the parent node to
-               * contain the routing protocol specific value. The protocol
-               * must also augment `action-value` to include its specific
-               * values or expand the `when` statement on the existing cases.
-               */
-              enum routing-protocol-specific {
-                description "Set a routing protocol specific action";
-                value 100;
-              }
+            type identityref {
+              base rmap-set-type;
             }
           }
 
-          choice action-value {
-            description
-              "Value to set (interpretation depends on action-type)";
+          choice set-action {
+            description "Value to set (interpretation depends on action-type)";
             case ipv4-address {
-              when "./action = 'ipv4-next-hop'";
+              when "derived-from-or-self(./action, 'ipv4-next-hop')";
               leaf ipv4-address {
                 description "IPv4 address";
                 type inet:ipv4-address;
               }
             }
             case ipv6-address {
-              when "./action = 'ipv6-next-hop'";
+              when "derived-from-or-self(./action, 'ipv6-next-hop')";
               leaf ipv6-address {
                 description "IPv6 address";
                 type inet:ipv6-address;
               }
             }
-            case metric {
-              when "./action = 'metric'";
+            case set-metric {
+              when "derived-from-or-self(./action, 'set-metric')";
               choice metric-value {
                 description "Metric to set or use";
                 case value {
@@ -367,7 +354,7 @@ module frr-route-map {
               }
             }
             case tag {
-              when "./action = 'tag'";
+              when "derived-from-or-self(./action, 'set-tag')";
               leaf tag {
                 description "Tag value";
                 type uint32 {
