@@ -55,62 +55,73 @@ DEFINE_MTYPE(PATHD, PCEP, "PCEP module")
 /*
  * Globals.
  */
-static pcep_glob_t pcep_glob_space = { .dbg = {0, "pathd module: pcep"} };
-pcep_glob_t *pcep_g = &pcep_glob_space;
+static struct pcep_glob pcep_glob_space = { .dbg = {0, "pathd module: pcep"} };
+struct pcep_glob *pcep_g = &pcep_glob_space;
 
 /* PCC Functions */
-static pcc_state_t* pcep_pcc_initialize(ctrl_state_t *ctrl_state, int index);
-static void pcep_pcc_finalize(ctrl_state_t *ctrl_state, pcc_state_t *pcc_state);
-static int pcep_pcc_update(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state,
-			   pcc_opts_t *pcc_opts, pce_opts_t *pce_opts);
-static int pcep_pcc_enable(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state);
-static int pcep_pcc_disable(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state);
-static void pcep_pcc_handle_pcep_event(ctrl_state_t *ctrl_state,
-				       pcc_state_t * pcc_state,
+static struct pcc_state* pcep_pcc_initialize(struct ctrl_state *ctrl_state,
+                                        int index);
+static void pcep_pcc_finalize(struct ctrl_state *ctrl_state,
+                              struct pcc_state *pcc_state);
+static int pcep_pcc_update(struct ctrl_state *ctrl_state,
+                           struct pcc_state *pcc_state,
+			   struct pcc_opts *pcc_opts,
+			   struct pce_opts *pce_opts);
+static int pcep_pcc_enable(struct ctrl_state *ctrl_state,
+                           struct pcc_state *pcc_state);
+static int pcep_pcc_disable(struct ctrl_state *ctrl_state,
+                            struct pcc_state *pcc_state);
+static void pcep_pcc_handle_pcep_event(struct ctrl_state *ctrl_state,
+				       struct pcc_state *pcc_state,
 				       pcep_event *event);
-static void pcep_pcc_handle_message(ctrl_state_t *ctrl_state,
-				    pcc_state_t * pcc_state,
+static void pcep_pcc_handle_message(struct ctrl_state *ctrl_state,
+				    struct pcc_state *pcc_state,
 				    struct pcep_message *msg);
-static void pcep_pcc_lsp_update(ctrl_state_t *ctrl_state,
-				pcc_state_t * pcc_state,
+static void pcep_pcc_lsp_update(struct ctrl_state *ctrl_state,
+				struct pcc_state *pcc_state,
 				struct pcep_message *msg);
-static void pcep_pcc_lsp_initiate(ctrl_state_t *ctrl_state,
-				  pcc_state_t * pcc_state,
+static void pcep_pcc_lsp_initiate(struct ctrl_state *ctrl_state,
+				  struct pcc_state *pcc_state,
 				  struct pcep_message *msg);
-static void pcep_pcc_send(ctrl_state_t *ctrl_state,
-			  pcc_state_t * pcc_state, struct pcep_message *msg);
-static void pcep_pcc_schedule_reconnect(ctrl_state_t *ctrl_state,
-					pcc_state_t *pcc_state);
-static void pcep_pcc_lookup_plspid(pcc_state_t *pcc_state, path_t *path);
-static void pcep_pcc_lookup_nbkey(pcc_state_t *pcc_state, path_t * path);
+static void pcep_pcc_send(struct ctrl_state *ctrl_state,
+			  struct pcc_state *pcc_state,
+			  struct pcep_message *msg);
+static void pcep_pcc_schedule_reconnect(struct ctrl_state *ctrl_state,
+					struct pcc_state *pcc_state);
+static void pcep_pcc_lookup_plspid(struct pcc_state *pcc_state,
+                                   struct path *path);
+static void pcep_pcc_lookup_nbkey(struct pcc_state *pcc_state,
+                                  struct path *path);
 /* FIXME: Enable this back when ODL is not complaining about update
 	acknowledgement when the report message status is not the same as the
 	one received with the update message */
-// static void pcep_pcc_push_srpid(pcc_state_t *pcc_state, path_t *path);
-// static void pcep_pcc_pop_srpid(pcc_state_t *pcc_state, path_t *path);
-static void pcep_pcc_send_report(ctrl_state_t *ctrl_state,
-				 pcc_state_t *pcc_state, path_t * path);
-static void pcep_pcc_handle_pathd_event(ctrl_state_t *ctrl_state,
-					pcc_state_t *pcc_state,
-					pathd_event_t type,
-					path_t * path);
+// static void pcep_pcc_push_srpid(struct pcc_state *pcc_state, struct path *path);
+// static void pcep_pcc_pop_srpid(struct pcc_state *pcc_state, struct path *path);
+static void pcep_pcc_send_report(struct ctrl_state *ctrl_state,
+				 struct pcc_state *pcc_state,
+				 struct path *path);
+static void pcep_pcc_handle_pathd_event(struct ctrl_state *ctrl_state,
+					struct pcc_state *pcc_state,
+					enum pathd_event_type type,
+					struct path * path);
 
 /* Controller Functions Called from Main */
 static int pcep_controller_initialize(void);
 static int pcep_controller_finalize(void);
-static int pcep_controller_pcc_update_options(pcc_opts_t *opts);
-static int pcep_controller_pce_update_options(int index, pce_opts_t *opts);
+static int pcep_controller_pcc_update_options(struct pcc_opts *opts);
+static int pcep_controller_pce_update_options(int index, struct pce_opts *opts);
 static void pcep_controller_pcc_disconnect(int index);
-static void pcep_controller_pcc_report(int index, path_t *path);
+static void pcep_controller_pcc_report(int index, struct path *path);
 static void pcep_controller_pcc_sync_done(int index);
 static int pcep_halt_cb(struct frr_pthread *fpt, void **res);
 
 /* Controller Functions Called From Thread */
-static void pcep_thread_start_sync(ctrl_state_t *ctrl_state,
-				   pcc_state_t * pcc_state);
-static void pcep_thread_update_path(ctrl_state_t *ctrl_state,
-				    pcc_state_t *pcc_state, path_t *path);
-static void pcep_thread_schedule_poll(ctrl_state_t *ctrl_state);
+static void pcep_thread_start_sync(struct ctrl_state *ctrl_state,
+				   struct pcc_state * pcc_state);
+static void pcep_thread_update_path(struct ctrl_state *ctrl_state,
+				    struct pcc_state *pcc_state,
+				    struct path *path);
+static void pcep_thread_schedule_poll(struct ctrl_state *ctrl_state);
 static int pcep_thread_init_event(struct thread *thread);
 static int pcep_thread_finish_event(struct thread *thread);
 static int pcep_thread_poll_timer(struct thread *thread);
@@ -124,7 +135,7 @@ static int pcep_thread_pcc_pathd_event(struct thread *thread);
 
 /* Main Thread Functions */
 static int pcep_main_start_sync_event(struct thread *thread);
-static int pcep_main_start_sync_event_cb(path_t *path, void *arg);
+static int pcep_main_start_sync_event_cb(struct path *path, void *arg);
 static int pcep_main_update_path_event(struct thread *thread);
 
 /* Hook Handlers called from the Main Thread */
@@ -134,7 +145,8 @@ static int pathd_candidate_updated_handler(
 		struct te_candidate_path *te_candidate_path);
 static int pathd_candidate_removed_handler(
 		struct te_candidate_path *te_candidate_path);
-static void pathd_candidate_send_pathd_event(pathd_event_t type, path_t *path);
+static void pathd_candidate_send_pathd_event(enum pathd_event_type type,
+                                             struct path *path);
 
 /* CLI Functions */
 static int pcep_cli_debug_config_write(struct vty *vty);
@@ -147,22 +159,25 @@ static int pcep_module_late_init(struct thread_master *tm);
 static int pcep_module_init(void);
 
 /* Data Structure Functions */
-static int plspid_map_cmp(const plspid_map_t *a, const plspid_map_t *b);
-static uint32_t plspid_map_hash(const plspid_map_t *e);
-static int nbkey_map_cmp(const nbkey_map_t *a, const nbkey_map_t *b);
-static uint32_t nbkey_map_hash(const nbkey_map_t *e);
-static int srpid_map_cmp(const srpid_map_t *a, const srpid_map_t *b);
-static uint32_t srpid_map_hash(const srpid_map_t *e);
+static int plspid_map_cmp(const struct plspid_map_data *a,
+                          const struct plspid_map_data *b);
+static uint32_t plspid_map_hash(const struct plspid_map_data *e);
+static int nbkey_map_cmp(const struct nbkey_map_data *a,
+                         const struct nbkey_map_data *b);
+static uint32_t nbkey_map_hash(const struct nbkey_map_data *e);
+static int srpid_map_cmp(const struct srpid_map_data *a,
+                         const struct srpid_map_data *b);
+static uint32_t srpid_map_hash(const struct srpid_map_data *e);
 
-DECLARE_HASH(plspid_map, plspid_map_t, mi, plspid_map_cmp, plspid_map_hash)
-DECLARE_HASH(nbkey_map, nbkey_map_t, mi, nbkey_map_cmp, nbkey_map_hash)
-DECLARE_HASH(srpid_map, srpid_map_t, mi, srpid_map_cmp, srpid_map_hash)
+DECLARE_HASH(plspid_map, struct plspid_map_data, mi, plspid_map_cmp, plspid_map_hash)
+DECLARE_HASH(nbkey_map, struct nbkey_map_data, mi, nbkey_map_cmp, nbkey_map_hash)
+DECLARE_HASH(srpid_map, struct srpid_map_data, mi, srpid_map_cmp, srpid_map_hash)
 
 static struct cmd_node pcc_node = {PCC_NODE, "%s(config-pcc)# "};
 
 /* ------------ Data Structure Functions ------------ */
 
-static int plspid_map_cmp(const plspid_map_t *a, const plspid_map_t *b)
+static int plspid_map_cmp(const struct plspid_map_data *a, const struct plspid_map_data *b)
 {
 	CMP_RETURN(a->nbkey.color, b->nbkey.color);
 	int cmp = ipaddr_cmp(&a->nbkey.endpoint, &b->nbkey.endpoint);
@@ -171,7 +186,7 @@ static int plspid_map_cmp(const plspid_map_t *a, const plspid_map_t *b)
 	return 0;
 }
 
-static uint32_t plspid_map_hash(const plspid_map_t *e)
+static uint32_t plspid_map_hash(const struct plspid_map_data *e)
 {
 	uint32_t hash;
 	hash = jhash_2words(e->nbkey.color, e->nbkey.preference, 0x55aa5a5a);
@@ -187,25 +202,25 @@ static uint32_t plspid_map_hash(const plspid_map_t *e)
 	}
 }
 
-static int nbkey_map_cmp(const nbkey_map_t *a, const nbkey_map_t *b)
+static int nbkey_map_cmp(const struct nbkey_map_data *a, const struct nbkey_map_data *b)
 {
 	CMP_RETURN(a->plspid, b->plspid);
 	return 0;
 }
 
-static uint32_t nbkey_map_hash(const nbkey_map_t *e)
+static uint32_t nbkey_map_hash(const struct nbkey_map_data *e)
 {
 	return e->plspid;
 }
 
 
-static int srpid_map_cmp(const srpid_map_t *a, const srpid_map_t *b)
+static int srpid_map_cmp(const struct srpid_map_data *a, const struct srpid_map_data *b)
 {
 	CMP_RETURN(a->plspid, b->plspid);
 	return 0;
 }
 
-static uint32_t srpid_map_hash(const srpid_map_t *e)
+static uint32_t srpid_map_hash(const struct srpid_map_data *e)
 {
 	return e->plspid;
 }
@@ -213,11 +228,11 @@ static uint32_t srpid_map_hash(const srpid_map_t *e)
 
 /* ------------ PCC Functions ------------ */
 
-pcc_state_t* pcep_pcc_initialize(ctrl_state_t *ctrl_state, int index)
+struct pcc_state* pcep_pcc_initialize(struct ctrl_state *ctrl_state, int index)
 {
 	assert(NULL != ctrl_state);
 
-	pcc_state_t *pcc_state = XCALLOC(MTYPE_PCEP, sizeof(*pcc_state));
+	struct pcc_state *pcc_state = XCALLOC(MTYPE_PCEP, sizeof(*pcc_state));
 
 	PCEP_DEBUG("PCC initializing...");
 
@@ -228,7 +243,7 @@ pcc_state_t* pcep_pcc_initialize(ctrl_state_t *ctrl_state, int index)
 	return pcc_state;
 }
 
-void pcep_pcc_finalize(ctrl_state_t *ctrl_state, pcc_state_t *pcc_state)
+void pcep_pcc_finalize(struct ctrl_state *ctrl_state, struct pcc_state *pcc_state)
 {
 	assert(NULL != ctrl_state);
 	assert(NULL != pcc_state);
@@ -248,8 +263,8 @@ void pcep_pcc_finalize(ctrl_state_t *ctrl_state, pcc_state_t *pcc_state)
 	XFREE(MTYPE_PCEP, pcc_state);
 }
 
-int pcep_pcc_update(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state,
-		    pcc_opts_t *pcc_opts, pce_opts_t *pce_opts)
+int pcep_pcc_update(struct ctrl_state *ctrl_state, struct pcc_state * pcc_state,
+		    struct pcc_opts *pcc_opts, struct pce_opts *pce_opts)
 {
 	assert(NULL != ctrl_state);
 	assert(NULL != pcc_state);
@@ -277,7 +292,7 @@ int pcep_pcc_update(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state,
 	return pcep_pcc_enable(ctrl_state, pcc_state);
 }
 
-int pcep_pcc_enable(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state)
+int pcep_pcc_enable(struct ctrl_state *ctrl_state, struct pcc_state * pcc_state)
 {
 	assert(DISCONNECTED == pcc_state->status);
 
@@ -301,7 +316,7 @@ int pcep_pcc_enable(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state)
 	return ret;
 }
 
-int pcep_pcc_disable(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state)
+int pcep_pcc_disable(struct ctrl_state *ctrl_state, struct pcc_state * pcc_state)
 {
 	assert(NULL != ctrl_state);
 	assert(NULL != pcc_state);
@@ -321,8 +336,8 @@ int pcep_pcc_disable(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state)
 	}
 }
 
-void pcep_pcc_handle_pcep_event(ctrl_state_t *ctrl_state,
-				pcc_state_t * pcc_state, pcep_event *event)
+void pcep_pcc_handle_pcep_event(struct ctrl_state *ctrl_state,
+				struct pcc_state * pcc_state, pcep_event *event)
 {
 	PCEP_DEBUG("Received PCEP event: %s", format_pcep_event(event));
 	switch (event->event_type) {
@@ -363,8 +378,8 @@ void pcep_pcc_handle_pcep_event(ctrl_state_t *ctrl_state,
 	}
 }
 
-void pcep_pcc_handle_message(ctrl_state_t *ctrl_state,
-			     pcc_state_t * pcc_state, struct pcep_message *msg)
+void pcep_pcc_handle_message(struct ctrl_state *ctrl_state,
+			     struct pcc_state * pcc_state, struct pcep_message *msg)
 {
 	switch (msg->msg_header->type) {
 		case PCEP_TYPE_INITIATE:
@@ -378,10 +393,10 @@ void pcep_pcc_handle_message(ctrl_state_t *ctrl_state,
 	}
 }
 
-void pcep_pcc_lsp_update(ctrl_state_t *ctrl_state,
-			 pcc_state_t *pcc_state, struct pcep_message *msg)
+void pcep_pcc_lsp_update(struct ctrl_state *ctrl_state,
+			 struct pcc_state *pcc_state, struct pcep_message *msg)
 {
-	path_t *path;
+	struct path *path;
 	path = pcep_lib_parse_path(msg->obj_list);
 	path->sender.ipa_type = IPADDR_V4;
 	path->sender.ipaddr_v4 = pcc_state->pce_opts->addr;
@@ -402,24 +417,24 @@ void pcep_pcc_lsp_update(ctrl_state_t *ctrl_state,
 	pcep_thread_update_path(ctrl_state, pcc_state, path);
 }
 
-void pcep_pcc_lsp_initiate(ctrl_state_t *ctrl_state,
-			   pcc_state_t *pcc_state, struct pcep_message *msg)
+void pcep_pcc_lsp_initiate(struct ctrl_state *ctrl_state,
+			   struct pcc_state *pcc_state, struct pcep_message *msg)
 {
 	PCEP_DEBUG("Received LSP initiate, not supported yet");
 }
 
-void pcep_pcc_send(ctrl_state_t *ctrl_state,
-		   pcc_state_t *pcc_state, struct pcep_message *msg)
+void pcep_pcc_send(struct ctrl_state *ctrl_state,
+		   struct pcc_state *pcc_state, struct pcep_message *msg)
 {
 	PCEP_DEBUG("Sending PCEP message: %s", format_pcep_message(msg));
 	send_message(pcc_state->sess, msg, true);
 }
 
-void pcep_pcc_schedule_reconnect(ctrl_state_t *ctrl_state,
-				 pcc_state_t *pcc_state)
+void pcep_pcc_schedule_reconnect(struct ctrl_state *ctrl_state,
+				 struct pcc_state *pcc_state)
 {
 	uint32_t delay;
-	event_pcc_cb_t *event;
+	struct event_pcc_cb *event;
 
 	pcc_state->retry_count++;
 	/* TODO: Add exponential backoff */
@@ -434,10 +449,10 @@ void pcep_pcc_schedule_reconnect(ctrl_state_t *ctrl_state,
 			 (void*)event, delay, &pcc_state->t_reconnect);
 }
 
-void pcep_pcc_lookup_plspid(pcc_state_t *pcc_state, path_t *path)
+void pcep_pcc_lookup_plspid(struct pcc_state *pcc_state, struct path *path)
 {
-	plspid_map_t key, *plspid_mapping;
-	nbkey_map_t *nbkey_mapping;
+	struct plspid_map_data key, *plspid_mapping;
+	struct nbkey_map_data *nbkey_mapping;
 
 	if (0 != path->nbkey.color) {
 		key.nbkey = path->nbkey;
@@ -462,9 +477,9 @@ void pcep_pcc_lookup_plspid(pcc_state_t *pcc_state, path_t *path)
 	}
 }
 
-void pcep_pcc_lookup_nbkey(pcc_state_t *pcc_state, path_t * path)
+void pcep_pcc_lookup_nbkey(struct pcc_state *pcc_state, struct path * path)
 {
-	nbkey_map_t key, *mapping;
+	struct nbkey_map_data key, *mapping;
 	//TODO: Should give an error to the PCE instead of crashing
 	assert(0 != path->plsp_id);
 	key.plspid = path->plsp_id;
@@ -476,9 +491,9 @@ void pcep_pcc_lookup_nbkey(pcc_state_t *pcc_state, path_t * path)
 /* FIXME: Enable this back when ODL is not complaining about update
 	acknowledgement when the report message status is not the same as the
 	one received with the update message */
-// void pcep_pcc_push_srpid(pcc_state_t *pcc_state, path_t *path)
+// void pcep_pcc_push_srpid(struct pcc_state *pcc_state, struct path *path)
 // {
-// 	srpid_map_t *srpid_mapping;
+// 	struct srpid_map_data *srpid_mapping;
 
 // 	if (0 == path->srp_id) return;
 
@@ -493,9 +508,9 @@ void pcep_pcc_lookup_nbkey(pcc_state_t *pcc_state, path_t * path)
 // 	srpid_map_add(&pcc_state->srpid_map, srpid_mapping);
 // }
 
-// void pcep_pcc_pop_srpid(pcc_state_t *pcc_state, path_t *path)
+// void pcep_pcc_pop_srpid(struct pcc_state *pcc_state, struct path *path)
 // {
-// 	srpid_map_t key, *srpid_mapping;
+// 	struct srpid_map_data key, *srpid_mapping;
 
 // 	key.plspid = path->plsp_id;
 
@@ -507,8 +522,8 @@ void pcep_pcc_lookup_nbkey(pcc_state_t *pcc_state, path_t * path)
 // 	XFREE(MTYPE_PCEP, srpid_mapping);
 // }
 
-void pcep_pcc_send_report(ctrl_state_t *ctrl_state, pcc_state_t *pcc_state,
-			  path_t * path)
+void pcep_pcc_send_report(struct ctrl_state *ctrl_state, struct pcc_state *pcc_state,
+			  struct path * path)
 {
 	double_linked_list *objs;
 	struct pcep_message *report;
@@ -525,10 +540,10 @@ void pcep_pcc_send_report(ctrl_state_t *ctrl_state, pcc_state_t *pcc_state,
 	pcep_pcc_send(ctrl_state, pcc_state, report);
 }
 
-void pcep_pcc_handle_pathd_event(ctrl_state_t *ctrl_state,
-				 pcc_state_t *pcc_state,
-				 pathd_event_t type,
-				 path_t * path)
+void pcep_pcc_handle_pathd_event(struct ctrl_state *ctrl_state,
+				 struct pcc_state *pcc_state,
+				 enum pathd_event_type type,
+				 struct path * path)
 {
 	if (!pcc_state->synchronized) return;
 	switch (type) {
@@ -554,7 +569,7 @@ void pcep_pcc_handle_pathd_event(ctrl_state_t *ctrl_state,
 int pcep_controller_initialize(void)
 {
 	int ret;
-	ctrl_state_t *ctrl_state;
+	struct ctrl_state *ctrl_state;
 	struct frr_pthread *fpt;
 	struct frr_pthread_attr attr = {
 		.start = frr_pthread_attr_default.start,
@@ -632,15 +647,15 @@ int pcep_controller_finalize(void)
 	return ret;
 }
 
-int pcep_controller_pcc_update_options(pcc_opts_t *opts)
+int pcep_controller_pcc_update_options(struct pcc_opts *opts)
 {
-	ctrl_state_t *ctrl_state;
-	event_pcc_update_t *event;
+	struct ctrl_state *ctrl_state;
+	struct event_pcc_update *event;
 
 	assert(NULL != opts);
 	assert(NULL != pcep_g->fpt);
 	assert(NULL != pcep_g->fpt->data);
-	ctrl_state = (ctrl_state_t*)pcep_g->fpt->data;
+	ctrl_state = (struct ctrl_state*)pcep_g->fpt->data;
 
 	event = XCALLOC(MTYPE_PCEP, sizeof(*event));
 	event->ctrl_state = ctrl_state;
@@ -652,16 +667,16 @@ int pcep_controller_pcc_update_options(pcc_opts_t *opts)
 	return 0;
 }
 
-int pcep_controller_pce_update_options(int index, pce_opts_t *opts)
+int pcep_controller_pce_update_options(int index, struct pce_opts *opts)
 {
-	ctrl_state_t *ctrl_state;
-	event_pce_update_t *event;
+	struct ctrl_state *ctrl_state;
+	struct event_pce_update *event;
 
 	assert(NULL != opts);
 	assert(index < MAX_PCC);
 	assert(NULL != pcep_g->fpt);
 	assert(NULL != pcep_g->fpt->data);
-	ctrl_state = (ctrl_state_t*)pcep_g->fpt->data;
+	ctrl_state = (struct ctrl_state*)pcep_g->fpt->data;
 	assert(index <= ctrl_state->pcc_count);
 
 	event = XCALLOC(MTYPE_PCEP, sizeof(*event));
@@ -677,12 +692,12 @@ int pcep_controller_pce_update_options(int index, pce_opts_t *opts)
 
 void pcep_controller_pcc_disconnect(int index)
 {
-	ctrl_state_t *ctrl_state;
+	struct ctrl_state *ctrl_state;
 
 	assert(index < MAX_PCC);
 	assert(NULL != pcep_g->fpt);
 	assert(NULL != pcep_g->fpt->data);
-	ctrl_state = (ctrl_state_t*)pcep_g->fpt->data;
+	ctrl_state = (struct ctrl_state*)pcep_g->fpt->data;
 	assert(index < ctrl_state->pcc_count);
 
 	thread_add_event(ctrl_state->self,
@@ -691,15 +706,15 @@ void pcep_controller_pcc_disconnect(int index)
 
 }
 
-void pcep_controller_pcc_report(int pcc_id, path_t *path)
+void pcep_controller_pcc_report(int pcc_id, struct path *path)
 {
-	ctrl_state_t *ctrl_state;
-	event_pcc_path_t *event;
+	struct ctrl_state *ctrl_state;
+	struct event_pcc_path *event;
 
 	assert(pcc_id < MAX_PCC);
 	assert(NULL != pcep_g->fpt);
 	assert(NULL != pcep_g->fpt->data);
-	ctrl_state = (ctrl_state_t*)pcep_g->fpt->data;
+	ctrl_state = (struct ctrl_state*)pcep_g->fpt->data;
 	assert(pcc_id < ctrl_state->pcc_count);
 
 	event = XCALLOC(MTYPE_PCEP, sizeof(*event));
@@ -713,12 +728,12 @@ void pcep_controller_pcc_report(int pcc_id, path_t *path)
 
 void pcep_controller_pcc_sync_done(int index)
 {
-	ctrl_state_t *ctrl_state;
+	struct ctrl_state *ctrl_state;
 
 	assert(index < MAX_PCC);
 	assert(NULL != pcep_g->fpt);
 	assert(NULL != pcep_g->fpt->data);
-	ctrl_state = (ctrl_state_t*)pcep_g->fpt->data;
+	ctrl_state = (struct ctrl_state*)pcep_g->fpt->data;
 	assert(index < ctrl_state->pcc_count);
 
 	thread_add_event(ctrl_state->self,
@@ -740,33 +755,33 @@ int pcep_halt_cb(struct frr_pthread *fpt, void **res)
 
 int pathd_candidate_created_handler(struct te_candidate_path *te_candidate_path)
 {
-	path_t *path = candidate_to_path(te_candidate_path);
+	struct path *path = candidate_to_path(te_candidate_path);
 	pathd_candidate_send_pathd_event(CANDIDATE_CREATED, path);
 	return 0;
 }
 
 int pathd_candidate_updated_handler(struct te_candidate_path *te_candidate_path)
 {
-	path_t *path = candidate_to_path(te_candidate_path);
+	struct path *path = candidate_to_path(te_candidate_path);
 	pathd_candidate_send_pathd_event(CANDIDATE_UPDATED, path);
 	return 0;
 }
 
 int pathd_candidate_removed_handler(struct te_candidate_path *te_candidate_path)
 {
-	path_t *path = candidate_to_path(te_candidate_path);
+	struct path *path = candidate_to_path(te_candidate_path);
 	pathd_candidate_send_pathd_event(CANDIDATE_REMOVED, path);
 	return 0;
 }
 
-void pathd_candidate_send_pathd_event(pathd_event_t type, path_t *path)
+void pathd_candidate_send_pathd_event(enum pathd_event_type type, struct path *path)
 {
-	ctrl_state_t *ctrl_state;
-	event_pathd_t *event;
+	struct ctrl_state *ctrl_state;
+	struct event_pathd *event;
 
 	assert(NULL != pcep_g->fpt);
 	assert(NULL != pcep_g->fpt->data);
-	ctrl_state = (ctrl_state_t*)pcep_g->fpt->data;
+	ctrl_state = (struct ctrl_state*)pcep_g->fpt->data;
 
 	event = XCALLOC(MTYPE_PCEP, sizeof(*event));
 	event->ctrl_state = ctrl_state;
@@ -781,7 +796,7 @@ void pathd_candidate_send_pathd_event(pathd_event_t type, path_t *path)
 /* ------------ Controller Functions Called From Thread ------------ */
 
 /* Notifies the main thread to start sending LSP to synchronize with PCE */
-void pcep_thread_start_sync(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state)
+void pcep_thread_start_sync(struct ctrl_state *ctrl_state, struct pcc_state * pcc_state)
 {
 	assert(NULL != ctrl_state);
 	assert(NULL != pcc_state);
@@ -791,11 +806,11 @@ void pcep_thread_start_sync(ctrl_state_t *ctrl_state, pcc_state_t * pcc_state)
 			 NULL, pcc_state->id, NULL);
 }
 
-void pcep_thread_update_path(ctrl_state_t *ctrl_state,
-			     pcc_state_t *pcc_state,
-			     path_t *path)
+void pcep_thread_update_path(struct ctrl_state *ctrl_state,
+			     struct pcc_state *pcc_state,
+			     struct path *path)
 {
-	event_pcc_path_t *event;
+	struct event_pcc_path *event;
 
 	event = XCALLOC(MTYPE_PCEP, sizeof(*event));
 	event->ctrl_state = ctrl_state;
@@ -807,7 +822,7 @@ void pcep_thread_update_path(ctrl_state_t *ctrl_state,
 }
 
 
-void pcep_thread_schedule_poll(ctrl_state_t *ctrl_state)
+void pcep_thread_schedule_poll(struct ctrl_state *ctrl_state)
 {
 	assert(NULL == ctrl_state->t_poll);
 	thread_add_timer(ctrl_state->self, pcep_thread_poll_timer,
@@ -817,7 +832,7 @@ void pcep_thread_schedule_poll(ctrl_state_t *ctrl_state)
 
 int pcep_thread_init_event(struct thread *thread)
 {
-	ctrl_state_t *ctrl_state = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = THREAD_ARG(thread);
 	int ret = 0;
 
 	pcep_thread_schedule_poll(ctrl_state);
@@ -829,7 +844,7 @@ int pcep_thread_finish_event(struct thread *thread)
 {
 	int i;
 	struct frr_pthread *fpt = THREAD_ARG(thread);
-	ctrl_state_t *ctrl_state = fpt->data;
+	struct ctrl_state *ctrl_state = fpt->data;
 
 	assert(NULL != ctrl_state);
 
@@ -853,7 +868,7 @@ int pcep_thread_finish_event(struct thread *thread)
 int pcep_thread_poll_timer(struct thread *thread)
 {
 	int i;
-	ctrl_state_t *ctrl_state = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = THREAD_ARG(thread);
 	pcep_event *event;
 
 	assert(NULL != ctrl_state);
@@ -861,7 +876,7 @@ int pcep_thread_poll_timer(struct thread *thread)
 
 	while (NULL != (event = event_queue_get_event())) {
 		for (i = 0; i < ctrl_state->pcc_count; i++) {
-			pcc_state_t *pcc_state = ctrl_state->pcc[i];
+			struct pcc_state *pcc_state = ctrl_state->pcc[i];
 			if (pcc_state->sess != event->session) continue;
 			pcep_pcc_handle_pcep_event(ctrl_state, pcc_state, event);
 			break;
@@ -876,9 +891,9 @@ int pcep_thread_poll_timer(struct thread *thread)
 
 int pcep_thread_pcc_update_options_event(struct thread *thread)
 {
-	event_pcc_update_t *event = THREAD_ARG(thread);
-	ctrl_state_t *ctrl_state = event->ctrl_state;
-	pcc_opts_t *pcc_opts = event->pcc_opts;
+	struct event_pcc_update *event = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = event->ctrl_state;
+	struct pcc_opts *pcc_opts = event->pcc_opts;
 
 	XFREE(MTYPE_PCEP, event);
 
@@ -893,12 +908,12 @@ int pcep_thread_pcc_update_options_event(struct thread *thread)
 
 int pcep_thread_pce_update_options_event(struct thread *thread)
 {
-	event_pce_update_t *event = THREAD_ARG(thread);
-	ctrl_state_t *ctrl_state = event->ctrl_state;
+	struct event_pce_update *event = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = event->ctrl_state;
 	int pcc_id = event->pcc_id;
-	pce_opts_t *pce_opts = event->pce_opts;
-	pcc_opts_t *pcc_opts;
-	pcc_state_t *pcc_state;
+	struct pce_opts *pce_opts = event->pce_opts;
+	struct pcc_opts *pcc_opts;
+	struct pcc_state *pcc_state;
 
 	XFREE(MTYPE_PCEP, event);
 
@@ -924,8 +939,8 @@ int pcep_thread_pce_update_options_event(struct thread *thread)
 
 int pcep_thread_pcc_disconnect_event(struct thread *thread)
 {
-	ctrl_state_t *ctrl_state = THREAD_ARG(thread);
-	pcc_state_t *pcc_state;
+	struct ctrl_state *ctrl_state = THREAD_ARG(thread);
+	struct pcc_state *pcc_state;
 	int pcc_id = THREAD_VAL(thread);
 
 	if (pcc_id < ctrl_state->pcc_count) {
@@ -938,12 +953,12 @@ int pcep_thread_pcc_disconnect_event(struct thread *thread)
 
 int pcep_thread_pcc_report_event(struct thread *thread)
 {
-	event_pcc_path_t *event = THREAD_ARG(thread);
-	ctrl_state_t *ctrl_state = event->ctrl_state;
+	struct event_pcc_path *event = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = event->ctrl_state;
 	int pcc_id = event->pcc_id;
-	path_t *path = event->path;
-	pcc_state_t *pcc_state = ctrl_state->pcc[pcc_id];
-	pcc_status_t status = pcc_state->status;
+	struct path *path = event->path;
+	struct pcc_state *pcc_state = ctrl_state->pcc[pcc_id];
+	enum pcc_status status = pcc_state->status;
 
 	XFREE(MTYPE_PCEP, event);
 
@@ -964,8 +979,8 @@ int pcep_thread_pcc_report_event(struct thread *thread)
 
 int pcep_thread_pcc_sync_done_event(struct thread *thread)
 {
-	ctrl_state_t *ctrl_state = THREAD_ARG(thread);
-	pcc_state_t *pcc_state;
+	struct ctrl_state *ctrl_state = THREAD_ARG(thread);
+	struct pcc_state *pcc_state;
 	int pcc_id = THREAD_VAL(thread);
 
 	if (pcc_id < ctrl_state->pcc_count) {
@@ -979,11 +994,11 @@ int pcep_thread_pcc_sync_done_event(struct thread *thread)
 
 int pcep_thread_pcc_cb_event(struct thread *thread)
 {
-	event_pcc_cb_t *event = THREAD_ARG(thread);
-	ctrl_state_t *ctrl_state = event->ctrl_state;
+	struct event_pcc_cb *event = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = event->ctrl_state;
 	int pcc_id = event->pcc_id;
 	pcc_cb_t callback = event->cb;
-	pcc_state_t *pcc_state = ctrl_state->pcc[pcc_id];
+	struct pcc_state *pcc_state = ctrl_state->pcc[pcc_id];
 
 	XFREE(MTYPE_PCEP, event);
 
@@ -993,15 +1008,15 @@ int pcep_thread_pcc_cb_event(struct thread *thread)
 int pcep_thread_pcc_pathd_event(struct thread *thread)
 {
 	int i;
-	event_pathd_t *event = THREAD_ARG(thread);
-	ctrl_state_t *ctrl_state = event->ctrl_state;
-	pathd_event_t type = event->type;
-	path_t *path = event->path;
+	struct event_pathd *event = THREAD_ARG(thread);
+	struct ctrl_state *ctrl_state = event->ctrl_state;
+	enum pathd_event_type type = event->type;
+	struct path *path = event->path;
 
 	XFREE(MTYPE_PCEP, event);
 
 	for (i = 0; i < ctrl_state->pcc_count; i++) {
-		pcc_state_t *pcc_state = ctrl_state->pcc[i];
+		struct pcc_state *pcc_state = ctrl_state->pcc[i];
 		if (!pcc_state->synchronized) continue;
 		pcep_pcc_handle_pathd_event(ctrl_state, pcc_state, type, path);
 	}
@@ -1017,13 +1032,13 @@ int pcep_thread_pcc_pathd_event(struct thread *thread)
 int pcep_main_start_sync_event(struct thread *thread)
 {
 	int pcc_id = THREAD_VAL(thread);
-	path_t *path;
+	struct path *path;
 
 	path_nb_list_path(pcep_main_start_sync_event_cb, &pcc_id);
 
 	/* Final sync report */
 	path = XCALLOC(MTYPE_PCEP, sizeof(*path));
-	*path = (path_t) {
+	*path = (struct path) {
 		.name = NULL,
 		.srp_id = 0,
 		.plsp_id = 0,
@@ -1042,7 +1057,7 @@ int pcep_main_start_sync_event(struct thread *thread)
 	return 0;
 }
 
-int pcep_main_start_sync_event_cb(path_t *path, void *arg)
+int pcep_main_start_sync_event_cb(struct path *path, void *arg)
 {
 	int *pcc_id = (int*)arg;
 	path->is_synching = true;
@@ -1052,8 +1067,8 @@ int pcep_main_start_sync_event_cb(path_t *path, void *arg)
 
 int pcep_main_update_path_event(struct thread *thread)
 {
-	event_pcc_path_t *event = THREAD_ARG(thread);
-	path_t *path = event->path;
+	struct event_pcc_path *event = THREAD_ARG(thread);
+	struct path *path = event->path;
 
 	XFREE(MTYPE_PCEP, event);
 
@@ -1074,7 +1089,7 @@ DEFUN_NOSH (pcep_cli_pcc,
 {
 	struct in_addr pcc_addr;
 	uint32_t pcc_port = PCEP_DEFAULT_PORT;
-	pcc_opts_t *opts;
+	struct pcc_opts *opts;
 
 	pcc_addr.s_addr = INADDR_ANY;
 
@@ -1113,7 +1128,7 @@ DEFUN (pcep_cli_pce_opts,
 {
 	struct in_addr pce_addr;
 	uint32_t pce_port = PCEP_DEFAULT_PORT;
-	pce_opts_t *pce_opts;
+	struct pce_opts *pce_opts;
 
 	int ip_idx = 2;
 	int port_idx = 4;
