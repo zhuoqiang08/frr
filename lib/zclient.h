@@ -325,6 +325,26 @@ struct zapi_nexthop {
 	struct ethaddr rmac;
 };
 
+enum zapi_srte_type {
+	ZAPI_SRTE_POLICY = 1,
+	ZAPI_SRTE_COLOR = 2,
+};
+
+struct zapi_srte {
+	enum zapi_srte_type type;
+	union {
+		char *policy;
+		uint32_t color;
+	};
+};
+
+struct zapi_srte_tunnel {
+	enum lsp_types_t type;
+	mpls_label_t local_label;
+	uint8_t label_num;
+	mpls_label_t labels[MPLS_MAX_LABELS];
+};
+
 /*
  * Some of these data structures do not map easily to
  * a actual data structure size giving different compilers
@@ -373,7 +393,7 @@ struct zapi_route {
  */
 #define ZEBRA_FLAG_RR_USE_DISTANCE    0x40
 
-	uint8_t message;
+	uint32_t message;
 
 	/*
 	 * This is an enum but we are going to treat it as a uint8_t
@@ -398,6 +418,8 @@ struct zapi_route {
 	vrf_id_t vrf_id;
 
 	uint32_t tableid;
+
+	struct zapi_srte srte;
 };
 
 struct zapi_nexthop_label {
@@ -420,13 +442,6 @@ struct zapi_labels {
 	} route;
 	uint16_t nexthop_num;
 	struct zapi_nexthop_label nexthops[MULTIPATH_NUM];
-};
-
-struct zapi_srte_tunnel {
-	enum lsp_types_t type;
-	mpls_label_t local_label;
-	uint8_t label_num;
-	mpls_label_t labels[MPLS_MAX_LABELS];
 };
 
 struct zapi_sr_policy {

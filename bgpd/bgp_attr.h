@@ -218,6 +218,12 @@ struct attr {
 
 	/* rmap set table */
 	uint32_t rmap_table_id;
+
+	/* SR-TE Policy Name */
+	char *srte_policy;
+
+	/* SR-TE Color */
+	uint32_t srte_color;
 };
 
 /* rmap_change_flags definition */
