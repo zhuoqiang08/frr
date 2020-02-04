@@ -1233,6 +1233,11 @@ void bgp_zebra_announce(struct bgp_node *rn, struct prefix *p,
 		api.tableid = info->attr->rmap_table_id;
 	}
 
+	if (CHECK_FLAG(info->attr->flag, BGP_ATTR_SRTE_COLOR)
+	    || CHECK_FLAG(info->attr->flag, BGP_ATTR_SRTE_POLICY))
+
+		SET_FLAG(api.message, ZAPI_MESSAGE_SRTE);
+
 	/* Metric is currently based on the best-path only */
 	metric = info->attr->med;
 	for (mpinfo = info; mpinfo; mpinfo = bgp_path_info_mpath_next(mpinfo)) {
