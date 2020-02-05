@@ -1397,6 +1397,7 @@ static void zread_route_add(ZAPI_HANDLER_ARGS)
 	int i, ret;
 	vrf_id_t vrf_id = 0;
 	struct ipaddr vtep_ip;
+	struct zebra_sr_policy *policy;
 
 	s = msg;
 	if (zapi_route_decode(s, &api) < 0) {
@@ -1574,6 +1575,19 @@ static void zread_route_add(ZAPI_HANDLER_ARGS)
 		re->tag = api.tag;
 	if (CHECK_FLAG(api.message, ZAPI_MESSAGE_MTU))
 		re->mtu = api.mtu;
+	if (CHECK_FLAG(api.message, ZAPI_MESSAGE_SRTE)) {
+                switch (api.srte.type) {
+                case ZAPI_SRTE_POLICY:
+			policy = zebra_sr_policy_find_by_name(api.srte.policy);
+			zlog_debug("Resolving SR Policy %s", policy->name);
+			// TODO: process policy
+			break;
+		case ZAPI_SRTE_COLOR:
+			// TODO: process color
+			break;
+		}
+	}
+
 
 	afi = family2afi(api.prefix.family);
 	if (afi != AFI_IP6 && CHECK_FLAG(api.message, ZAPI_MESSAGE_SRCPFX)) {
@@ -1925,8 +1939,7 @@ static void zread_sr_policy_set(ZAPI_HANDLER_ARGS)
 
 	policy = zebra_sr_policy_find(zp.color, zp.endpoint);
 	if (!policy)
-		policy = zebra_sr_policy_add(zp.color, zp.endpoint);
-	strlcpy(policy->name, zp.name, sizeof(policy->name));
+		policy = zebra_sr_policy_add(zp.color, zp.endpoint, zp.name);
 	policy->active_segment_list = zp.active_segment_list;
 	policy->status = ZEBRA_SR_POLICY_UNKNOWN;
 	/* TODO: per-VRF list of SR-TE policies. */
