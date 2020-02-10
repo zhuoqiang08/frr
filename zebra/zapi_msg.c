@@ -1546,6 +1546,11 @@ static void zread_route_add(ZAPI_HANDLER_ARGS)
 		if (api_nh->onlink)
 			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_ONLINK);
 
+		if (CHECK_FLAG(api.message, ZAPI_MESSAGE_SRTE)) {
+			SET_FLAG(nexthop->flags, NEXTHOP_FLAG_SRTE);
+			nexthop->srte_color = api_nh->srte_color;
+		}
+
 		/* MPLS labels for BGP-LU or Segment Routing */
 		if (CHECK_FLAG(api.message, ZAPI_MESSAGE_LABEL)
 		    && api_nh->type != NEXTHOP_TYPE_IFINDEX

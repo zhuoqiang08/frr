@@ -975,6 +975,9 @@ int zapi_route_encode(uint8_t cmd, struct stream *s, struct zapi_route *api)
 			if (CHECK_FLAG(api->flags, ZEBRA_FLAG_EVPN_ROUTE))
 				stream_put(s, &(api_nh->rmac),
 					   sizeof(struct ethaddr));
+
+			if (CHECK_FLAG(api->message, ZAPI_MESSAGE_SRTE))
+				stream_putl(s, api_nh->srte_color);
 		}
 	}
 
@@ -1150,6 +1153,9 @@ int zapi_route_decode(struct stream *s, struct zapi_route *api)
 			if (CHECK_FLAG(api->flags, ZEBRA_FLAG_EVPN_ROUTE))
 				stream_get(&(api_nh->rmac), s,
 					   sizeof(struct ethaddr));
+
+			if (CHECK_FLAG(api->message, ZAPI_MESSAGE_SRTE))
+				STREAM_GETL(s, api_nh->srte_color);
 		}
 	}
 
@@ -1349,6 +1355,7 @@ struct nexthop *nexthop_from_zapi_nexthop(struct zapi_nexthop *znh)
 	n->vrf_id = znh->vrf_id;
 	n->ifindex = znh->ifindex;
 	n->gate = znh->gate;
+	n->srte_color = znh->srte_color;
 
 	/*
 	 * This function currently handles labels

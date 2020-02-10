@@ -323,6 +323,9 @@ struct zapi_nexthop {
 	mpls_label_t labels[MPLS_MAX_LABELS];
 
 	struct ethaddr rmac;
+
+	/* SR-TE color used for BGP traffic */
+	uint32_t srte_color;
 };
 
 enum zapi_srte_type {

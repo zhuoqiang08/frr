@@ -83,6 +83,7 @@ struct nexthop {
 #define NEXTHOP_FLAG_MATCHED    (1 << 4) /* Already matched vs a nexthop */
 #define NEXTHOP_FLAG_DUPLICATE  (1 << 5) /* nexthop duplicates another active one */
 #define NEXTHOP_FLAG_RNH_FILTERED  (1 << 6) /* rmap filtered, used by rnh */
+#define NEXTHOP_FLAG_SRTE       (1 << 7) /* SR-TE color used for BGP traffic */
 #define NEXTHOP_IS_ACTIVE(flags)                                               \
 	(CHECK_FLAG(flags, NEXTHOP_FLAG_ACTIVE)                                \
 	 && !CHECK_FLAG(flags, NEXTHOP_FLAG_DUPLICATE))
@@ -110,6 +111,9 @@ struct nexthop {
 
 	/* Label(s) associated with this nexthop. */
 	struct mpls_label_stack *nh_label;
+
+	/* SR-TE color used for BGP traffic */
+	uint32_t srte_color;
 };
 
 struct nexthop *nexthop_new(void);
