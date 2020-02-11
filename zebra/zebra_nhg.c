@@ -36,6 +36,7 @@
 #include "zebra/zebra_rnh.h"
 #include "zebra/zebra_routemap.h"
 #include "zebra/zebra_memory.h"
+#include "zebra/zebra_srte.h"
 #include "zebra/zserv.h"
 #include "zebra/rt.h"
 #include "zebra_errors.h"
@@ -1162,7 +1163,8 @@ void zebra_nhg_increment_ref(struct nhg_hash_entry *nhe)
 }
 
 static void nexthop_set_resolved(afi_t afi, const struct nexthop *newhop,
-				 struct nexthop *nexthop)
+				 struct nexthop *nexthop,
+				 struct zebra_sr_policy *policy)
 {
 	struct nexthop *resolved_hop;
 	uint8_t num_labels = 0;
@@ -1226,7 +1228,12 @@ static void nexthop_set_resolved(afi_t afi, const struct nexthop *newhop,
 		resolved_hop->flags |= NEXTHOP_FLAG_ONLINK;
 
 	/* Copy labels of the resolved route and the parent resolving to it */
-	if (newhop->nh_label) {
+	if (policy) {
+		for (i = 0; i < policy->active_segment_list.label_num; i++)
+			labels[num_labels++] =
+				policy->active_segment_list.labels[i];
+		label_type = policy->active_segment_list.type;
+	} else if (newhop->nh_label) {
 		for (i = 0; i < newhop->nh_label->num_labels; i++)
 			labels[num_labels++] = newhop->nh_label->label[i];
 		label_type = newhop->nh_label_type;
@@ -1354,6 +1361,27 @@ static int nexthop_active(afi_t afi, struct route_entry *re,
 		}
 	}
 
+	if (nexthop->srte_color) {
+		struct zebra_sr_policy *policy;
+
+		/* TODO: ipv6. */
+		policy = zebra_sr_policy_find(nexthop->srte_color,
+					      nexthop->gate.ipv4);
+		if (policy && policy->lsp) {
+			resolved = 0;
+			for (ALL_NEXTHOPS_PTR(policy->lsp->nhlfe_list,
+					      newhop)) {
+				SET_FLAG(nexthop->flags,
+					 NEXTHOP_FLAG_RECURSIVE);
+				nexthop_set_resolved(afi, newhop, nexthop,
+						     policy);
+				resolved = 1;
+			}
+			if (resolved)
+				return 1;
+		}
+	}
+
 	/* Make lookup prefix. */
 	memset(&p, 0, sizeof(struct prefix));
 	switch (afi) {
@@ -1454,7 +1482,8 @@ static int nexthop_active(afi_t afi, struct route_entry *re,
 
 				SET_FLAG(nexthop->flags,
 					 NEXTHOP_FLAG_RECURSIVE);
-				nexthop_set_resolved(afi, newhop, nexthop);
+				nexthop_set_resolved(afi, newhop, nexthop,
+						     NULL);
 				resolved = 1;
 			}
 			if (resolved)
@@ -1475,7 +1504,8 @@ static int nexthop_active(afi_t afi, struct route_entry *re,
 
 				SET_FLAG(nexthop->flags,
 					 NEXTHOP_FLAG_RECURSIVE);
-				nexthop_set_resolved(afi, newhop, nexthop);
+				nexthop_set_resolved(afi, newhop, nexthop,
+						     NULL);
 				resolved = 1;
 			}
 			if (resolved)
