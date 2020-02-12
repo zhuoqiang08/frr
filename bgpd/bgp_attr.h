@@ -220,9 +220,6 @@ struct attr {
 	/* rmap set table */
 	uint32_t rmap_table_id;
 
-	/* SR-TE Policy Name */
-	char srte_policy[SRTE_POLICY_NAME_MAX_LENGTH];
-
 	/* SR-TE Color */
 	uint32_t srte_color;
 };
