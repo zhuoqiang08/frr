@@ -22,12 +22,116 @@
 #include "command.h"
 #include "mpls.h"
 #include "northbound_cli.h"
+#include "termtable.h"
 
 #include "pathd/pathd.h"
 #include "pathd/path_nb.h"
 #ifndef VTYSH_EXTRACT_PL
 #include "pathd/path_cli_clippy.c"
 #endif
+
+/*
+ * Show SR-TE info
+ */
+DEFPY(show_srte_policy, show_srte_policy_cmd, "show sr-te policy",
+      SHOW_STR
+      "SR-TE info\n"
+      "SR-TE Policy\n")
+{
+	struct ttable *tt;
+	struct te_sr_policy *policy;
+	char endpoint[46];
+	char *table;
+
+	if (RB_EMPTY(te_sr_policy_instance_head, &te_sr_policy_instances)) {
+		vty_out(vty, "No SR Policies to display.\n\n");
+		return CMD_SUCCESS;
+	}
+
+	/* Prepare table. */
+	tt = ttable_new(&ttable_styles[TTSTYLE_BLANK]);
+	ttable_add_row(tt, "Endpoint|Color|Name|BSID|Status");
+	tt->style.cell.rpad = 2;
+	tt->style.corner = '+';
+	ttable_restyle(tt);
+	ttable_rowseps(tt, 0, BOTTOM, true, '-');
+
+	RB_FOREACH (policy, te_sr_policy_instance_head,
+		    &te_sr_policy_instances) {
+		ipaddr2str(&policy->endpoint, endpoint, sizeof(endpoint));
+		ttable_add_row(tt, "%s|%d|%s|%d|%s", endpoint, policy->color,
+			       policy->name, policy->binding_sid,
+			       policy->status == TE_POLICY_UP ? "Active"
+							      : "Inactive");
+	}
+
+	/* Dump the generated table. */
+	table = ttable_dump(tt, "\n");
+	vty_out(vty, "%s\n", table);
+	XFREE(MTYPE_TMP, table);
+
+	ttable_del(tt);
+
+	return CMD_SUCCESS;
+}
+
+/*
+ * Show detailed SR-TE info
+ */
+DEFPY(show_srte_policy_detail, show_srte_policy_detail_cmd,
+      "show sr-te policy detail",
+      SHOW_STR
+      "SR-TE info\n"
+      "SR-TE Policy\n"
+      "Show a detailed summary\n")
+{
+	struct te_sr_policy *policy;
+	struct te_candidate_path *candidate_path;
+	char endpoint[46];
+
+	if (RB_EMPTY(te_sr_policy_instance_head, &te_sr_policy_instances)) {
+		vty_out(vty, "No SR Policies to display.\n\n");
+		return CMD_SUCCESS;
+	}
+
+	vty_out(vty, "\n");
+
+	RB_FOREACH (policy, te_sr_policy_instance_head,
+		    &te_sr_policy_instances) {
+
+		ipaddr2str(&policy->endpoint, endpoint, sizeof(endpoint));
+		vty_out(vty,
+			"Endpoint: %s  Color: %d  Name: %s  BSID: %d  Status: %s\n",
+			endpoint, policy->color, policy->name,
+			policy->binding_sid,
+			policy->status == TE_POLICY_UP ? "Active" : "Inactive");
+
+		RB_FOREACH (candidate_path, te_candidate_path_instance_head,
+			    &policy->candidate_paths) {
+			vty_out(vty,
+				"  %s Preference: %d  Name: %s  Type: %s  Segment-List: %s  Protocol-Origin: %s\n",
+				candidate_path->is_best_candidate_path ? "*"
+								       : " ",
+				candidate_path->preference,
+				candidate_path->name,
+				candidate_path->type
+						== TE_CANDIDATE_PATH_EXPLICIT
+					? "explicit"
+					: "dynamic",
+				candidate_path->segment_list_name == NULL
+					? "(undefined)"
+					: candidate_path->segment_list_name,
+				candidate_path->protocol_origin
+						== TE_ORIGIN_PCEP
+					? "PCEP"
+					: "Config");
+		}
+
+		vty_out(vty, "\n");
+	}
+
+	return CMD_SUCCESS;
+}
 
 /*
  * XPath: /frr-pathd:pathd/segment-list
@@ -366,6 +470,9 @@ void path_cli_init(void)
 	install_node(&sr_policy_node, config_write_sr_policies);
 	install_default(SEGMENT_LIST_NODE);
 	install_default(SR_POLICY_NODE);
+
+	install_element(ENABLE_NODE, &show_srte_policy_cmd);
+	install_element(ENABLE_NODE, &show_srte_policy_detail_cmd);
 
 	install_element(CONFIG_NODE, &te_path_segment_list_cmd);
 	install_element(CONFIG_NODE, &no_te_path_segment_list_cmd);
