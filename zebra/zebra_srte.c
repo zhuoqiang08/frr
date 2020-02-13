@@ -106,6 +106,8 @@ void zebra_sr_policy_install(struct zebra_sr_policy *policy)
 		return;
 
 	for (nhlfe = lsp->nhlfe_list; nhlfe; nhlfe = nhlfe->next) {
+		if (CHECK_FLAG(nhlfe->flags, NHLFE_FLAG_DELETED))
+			continue;
 		ret = mpls_lsp_install(
 			policy->zvrf, zt->type, zt->local_label, zt->label_num,
 			zt->labels, nhlfe->nexthop->type, &nhlfe->nexthop->gate,
