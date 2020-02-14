@@ -37,6 +37,7 @@
 #include "pw.h"
 
 #include "mlag.h"
+#include "srte.h"
 
 /* Zebra types. Used in Zserv message header. */
 typedef uint16_t zebra_size_t;
@@ -72,8 +73,6 @@ typedef uint16_t zebra_size_t;
 /* Zebra FEC register command flags. */
 #define ZEBRA_FEC_REGISTER_LABEL          0x1
 #define ZEBRA_FEC_REGISTER_LABEL_INDEX    0x2
-
-#define ZEBRA_SR_POLICY_NAME_MAX_LENGTH   100
 
 extern struct sockaddr_storage zclient_addr;
 extern socklen_t zclient_addr_len;
@@ -281,19 +280,19 @@ struct zclient {
 };
 
 /* Zebra API message flag. */
-#define ZAPI_MESSAGE_NEXTHOP  0x01
-#define ZAPI_MESSAGE_DISTANCE 0x02
-#define ZAPI_MESSAGE_METRIC   0x04
-#define ZAPI_MESSAGE_TAG      0x08
-#define ZAPI_MESSAGE_MTU      0x10
-#define ZAPI_MESSAGE_SRCPFX   0x20
-#define ZAPI_MESSAGE_LABEL    0x40
+#define ZAPI_MESSAGE_NEXTHOP  0x0001
+#define ZAPI_MESSAGE_DISTANCE 0x0002
+#define ZAPI_MESSAGE_METRIC   0x0004
+#define ZAPI_MESSAGE_TAG      0x0008
+#define ZAPI_MESSAGE_MTU      0x0010
+#define ZAPI_MESSAGE_SRCPFX   0x0020
+#define ZAPI_MESSAGE_LABEL    0x0040
 /*
  * This should only be used by a DAEMON that needs to communicate
  * the table being used is not in the VRF.  You must pass the
  * default vrf, else this will be ignored.
  */
-#define ZAPI_MESSAGE_TABLEID  0x80
+#define ZAPI_MESSAGE_TABLEID  0x0080
 #define ZAPI_MESSAGE_SRTE     0x0100
 
 #define ZSERV_VERSION 6
@@ -324,15 +323,8 @@ struct zapi_nexthop {
 
 	struct ethaddr rmac;
 
-	/* SR-TE color used for BGP traffic */
+	/* SR-TE color. */
 	uint32_t srte_color;
-};
-
-struct zapi_srte_tunnel {
-	enum lsp_types_t type;
-	mpls_label_t local_label;
-	uint8_t label_num;
-	mpls_label_t labels[MPLS_MAX_LABELS];
 };
 
 /*
@@ -432,11 +424,18 @@ struct zapi_labels {
 	struct zapi_nexthop_label nexthops[MULTIPATH_NUM];
 };
 
+struct zapi_srte_tunnel {
+	enum lsp_types_t type;
+	mpls_label_t local_label;
+	uint8_t label_num;
+	mpls_label_t labels[MPLS_MAX_LABELS];
+};
+
 struct zapi_sr_policy {
 	uint32_t color;
 	struct ipaddr endpoint;
-	char name[ZEBRA_SR_POLICY_NAME_MAX_LENGTH];
-	struct zapi_srte_tunnel active_segment_list;
+	char name[SRTE_POLICY_NAME_MAX_LENGTH];
+	struct zapi_srte_tunnel segment_list;
 	int status;
 };
 
