@@ -728,7 +728,7 @@ fi
 
 
 %changelog
-* Fri Feb 14 2020 Martin Winter <mwinter@opensourcerouting.org> - %{version}
+* Fri Feb 13 2020 Martin Winter <mwinter@opensourcerouting.org> - %{version}
 - BGPd
 -    EVPN PIP Support
 -    Route Aggregation code speed ups
