@@ -392,8 +392,9 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 
 	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
 	segment_list_name = yang_dnode_get_string(dnode, NULL);
-	te_sr_policy_candidate_path_segment_list_name_set(te_candidate_path,
-							  segment_list_name);
+	te_candidate_path->segment_list =
+		te_segment_list_get(segment_list_name);
+	assert(te_candidate_path->segment_list);
 
 	return NB_OK;
 }
@@ -401,5 +402,13 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 int pathd_te_sr_policy_candidate_path_segment_list_name_destroy(
 	enum nb_event event, const struct lyd_node *dnode)
 {
+	struct te_candidate_path *te_candidate_path;
+
+	if (event != NB_EV_APPLY)
+		return NB_OK;
+
+	te_candidate_path = nb_running_get_entry(dnode, NULL, true);
+	te_candidate_path->segment_list = NULL;
+
 	return NB_OK;
 }
