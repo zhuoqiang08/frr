@@ -201,7 +201,7 @@ int pathd_te_sr_policy_binding_sid_modify(enum nb_event event,
 
 	policy = nb_running_get_entry(dnode, NULL, true);
 	binding_sid = yang_dnode_get_uint32(dnode, NULL);
-	policy->binding_sid = binding_sid;
+	srte_policy_update_binding_sid(policy, binding_sid);
 
 	return NB_OK;
 }
@@ -215,7 +215,7 @@ int pathd_te_sr_policy_binding_sid_destroy(enum nb_event event,
 		return NB_OK;
 
 	policy = nb_running_get_entry(dnode, NULL, true);
-	policy->binding_sid = MPLS_LABEL_NONE;
+	srte_policy_update_binding_sid(policy, MPLS_LABEL_NONE);
 
 	return NB_OK;
 }
