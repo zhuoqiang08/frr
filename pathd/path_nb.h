@@ -42,8 +42,6 @@ int pathd_te_segment_list_segment_destroy(enum nb_event event,
 int pathd_te_segment_list_segment_sid_value_modify(enum nb_event event,
 						   const struct lyd_node *dnode,
 						   union nb_resource *resource);
-int pathd_te_segment_list_segment_sid_value_destroy(
-	enum nb_event event, const struct lyd_node *dnode);
 int pathd_te_sr_policy_create(enum nb_event event, const struct lyd_node *dnode,
 			      union nb_resource *resource);
 int pathd_te_sr_policy_destroy(enum nb_event event,
