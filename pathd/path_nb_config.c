@@ -152,6 +152,14 @@ int pathd_te_sr_policy_destroy(enum nb_event event,
 	return NB_OK;
 }
 
+void pathd_te_sr_policy_apply_finish(const struct lyd_node *dnode)
+{
+	struct srte_policy *policy;
+
+	policy = nb_running_get_entry(dnode, NULL, true);
+	srte_policy_update_candidates(policy);
+}
+
 /*
  * XPath: /frr-pathd:pathd/sr-policy/name
  */
@@ -248,17 +256,9 @@ int pathd_te_sr_policy_candidate_path_create(enum nb_event event,
 	preference = yang_dnode_get_uint32(dnode, "./preference");
 	candidate = srte_candidate_add(policy, preference);
 	nb_running_set_entry(dnode, candidate);
+	SET_FLAG(candidate->flags, F_CANDIDATE_NEW);
 
 	return NB_OK;
-}
-
-void pathd_te_sr_policy_candidate_path_apply_finish(
-	const struct lyd_node *dnode)
-{
-	struct srte_candidate *candidate;
-
-	candidate = nb_running_get_entry(dnode, NULL, true);
-	srte_candidate_set_active(candidate->policy, candidate);
 }
 
 int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
@@ -269,10 +269,8 @@ int pathd_te_sr_policy_candidate_path_destroy(enum nb_event event,
 	if (event != NB_EV_APPLY)
 		return NB_OK;
 
-	candidate = nb_running_get_entry(dnode, NULL, true);
-	srte_candidate_del(candidate);
-
-	srte_candidate_set_active(candidate->policy, candidate);
+	candidate = nb_running_unset_entry(dnode);
+	SET_FLAG(candidate->flags, F_CANDIDATE_DELETED);
 
 	return NB_OK;
 }
@@ -293,6 +291,7 @@ int pathd_te_sr_policy_candidate_path_name_modify(enum nb_event event,
 	candidate = nb_running_get_entry(dnode, NULL, true);
 	name = yang_dnode_get_string(dnode, NULL);
 	strlcpy(candidate->name, name, sizeof(candidate->name));
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
@@ -313,6 +312,7 @@ int pathd_te_sr_policy_candidate_path_protocol_origin_modify(
 	candidate = nb_running_get_entry(dnode, NULL, true);
 	protocol_origin = yang_dnode_get_enum(dnode, NULL);
 	candidate->protocol_origin = protocol_origin;
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
@@ -333,6 +333,7 @@ int pathd_te_sr_policy_candidate_path_originator_modify(
 	candidate = nb_running_get_entry(dnode, NULL, true);
 	yang_dnode_get_ip(&originator, dnode, NULL);
 	candidate->originator = originator;
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
@@ -353,6 +354,7 @@ int pathd_te_sr_policy_candidate_path_discriminator_modify(
 	candidate = nb_running_get_entry(dnode, NULL, true);
 	discriminator = yang_dnode_get_uint32(dnode, NULL);
 	candidate->discriminator = discriminator;
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
@@ -373,6 +375,7 @@ int pathd_te_sr_policy_candidate_path_type_modify(enum nb_event event,
 	candidate = nb_running_get_entry(dnode, NULL, true);
 	type = yang_dnode_get_enum(dnode, NULL);
 	candidate->type = type;
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
@@ -394,6 +397,7 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_modify(
 	segment_list_name = yang_dnode_get_string(dnode, NULL);
 	candidate->segment_list = srte_segment_list_find(segment_list_name);
 	assert(candidate->segment_list);
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
@@ -408,6 +412,7 @@ int pathd_te_sr_policy_candidate_path_segment_list_name_destroy(
 
 	candidate = nb_running_get_entry(dnode, NULL, true);
 	candidate->segment_list = NULL;
+	SET_FLAG(candidate->flags, F_CANDIDATE_MODIFIED);
 
 	return NB_OK;
 }
