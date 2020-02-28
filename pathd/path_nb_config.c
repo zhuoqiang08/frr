@@ -17,6 +17,7 @@
  */
 
 #include <zebra.h>
+#include <lib_errors.h>
 
 #include "northbound.h"
 #include "libfrr.h"
@@ -173,10 +174,21 @@ int pathd_te_sr_policy_name_modify(enum nb_event event,
 	struct srte_policy *policy;
 	const char *name;
 
-	if (event != NB_EV_APPLY)
+	if (event != NB_EV_APPLY && event != NB_EV_VALIDATE)
 		return NB_OK;
 
 	policy = nb_running_get_entry(dnode, NULL, true);
+
+	if (event == NB_EV_VALIDATE) {
+		/* the policy name is fixed after setting it once */
+		if (strlen(policy->name) > 0) {
+			flog_warn(EC_LIB_NB_CB_CONFIG_VALIDATE,
+				  "The SR Policy name is fixed!");
+			return NB_ERR_RESOURCE;
+		} else
+			return NB_OK;
+	}
+
 	name = yang_dnode_get_string(dnode, NULL);
 	strlcpy(policy->name, name, sizeof(policy->name));
 	SET_FLAG(policy->flags, F_POLICY_MODIFIED);
