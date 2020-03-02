@@ -1757,9 +1757,11 @@ DEFUNSH(VTYSH_PATHD, te_path_sr_policy, te_path_sr_policy_cmd,
 
 DEFUNSH(VTYSH_PATHD, pcep_cli_pcc, pcep_cli_pcc_cmd,
 	"pcc [ip A.B.C.D] [port (1024-65535)]",
-	"PCC source ip and port\n"
-	"PCC source ip A.B.C.D\n"
-	"PCC source port port")
+	"PCC configuration\n"
+	"PCC source adress\n"
+	"PCC source IPv4 address\n"
+	"PCC source port\n"
+	"PCC source port value\n")
 {
 	vty->node = PCC_NODE;
 	return CMD_SUCCESS;
@@ -1881,6 +1883,7 @@ static int vtysh_exit(struct vty *vty)
 	case OPENFABRIC_NODE:
 	case SEGMENT_LIST_NODE:
 	case SR_POLICY_NODE:
+	case PCC_NODE:
 	case RMAP_NODE:
 	case PBRMAP_NODE:
 	case VTY_NODE:
@@ -3918,6 +3921,8 @@ void vtysh_init_vty(void)
 	install_element(SEGMENT_LIST_NODE, &vtysh_quit_pathd_cmd);
 	install_element(SR_POLICY_NODE, &vtysh_exit_pathd_cmd);
 	install_element(SR_POLICY_NODE, &vtysh_quit_pathd_cmd);
+	install_element(PCC_NODE, &vtysh_exit_pathd_cmd);
+	install_element(PCC_NODE, &vtysh_quit_pathd_cmd);
 	install_element(RMAP_NODE, &vtysh_exit_rmap_cmd);
 	install_element(RMAP_NODE, &vtysh_quit_rmap_cmd);
 	install_element(PBRMAP_NODE, &vtysh_exit_pbr_map_cmd);
@@ -3979,6 +3984,7 @@ void vtysh_init_vty(void)
 	install_element(KEYCHAIN_KEY_NODE, &vtysh_end_all_cmd);
 	install_element(SEGMENT_LIST_NODE, &vtysh_end_all_cmd);
 	install_element(SR_POLICY_NODE, &vtysh_end_all_cmd);
+	install_element(PCC_NODE, &vtysh_end_all_cmd);
 	install_element(RMAP_NODE, &vtysh_end_all_cmd);
 	install_element(PBRMAP_NODE, &vtysh_end_all_cmd);
 	install_element(VTY_NODE, &vtysh_end_all_cmd);
