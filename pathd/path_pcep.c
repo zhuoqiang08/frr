@@ -1100,9 +1100,11 @@ int pcep_main_update_path_event(struct thread *thread)
 
 DEFUN_NOSH(pcep_cli_pcc, pcep_cli_pcc_cmd,
 	   "pcc [ip A.B.C.D] [port (1024-65535)]",
-	   "PCC source ip and port\n"
-	   "PCC source ip A.B.C.D\n"
-	   "PCC source port port")
+	   "PCC configuration\n"
+	   "PCC source ip\n"
+	   "PCC source IPv4 address\n"
+	   "PCC source port\n"
+	   "PCC source port value\n")
 {
 	struct in_addr pcc_addr;
 	uint32_t pcc_port = PCEP_DEFAULT_PORT;
@@ -1138,9 +1140,11 @@ DEFUN_NOSH(pcep_cli_pcc, pcep_cli_pcc_cmd,
 
 DEFUN(pcep_cli_pce_opts, pcep_cli_pce_opts_cmd,
       "pce ip A.B.C.D [port (1024-65535)]",
-      "PCE remote ip and port\n"
-      "Remote PCE server ip A.B.C.D\n"
-      "Remote PCE server port")
+      "PCE configuration\n"
+      "PCE address\n"
+      "Remote PCE server IPv4 address\n"
+      "Remote PCE server port\n"
+      "Remote PCE server port value\n")
 {
 	struct in_addr pce_addr;
 	uint32_t pce_port = PCEP_DEFAULT_PORT;
