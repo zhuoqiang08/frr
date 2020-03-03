@@ -317,7 +317,7 @@ void cli_show_te_path_sr_policy_name(struct vty *vty, struct lyd_node *dnode,
  * XPath: /frr-pathd:pathd/sr-policy/binding-sid
  */
 DEFPY(te_path_sr_policy_binding_sid, te_path_sr_policy_binding_sid_cmd,
-      "binding-sid (0-1048575)$label",
+      "binding-sid (16-1048575)$label",
       "Segment Routing Policy Binding-SID\n"
       "SR Policy Binding-SID label\n")
 {
@@ -327,7 +327,7 @@ DEFPY(te_path_sr_policy_binding_sid, te_path_sr_policy_binding_sid_cmd,
 }
 
 DEFPY(no_te_path_sr_policy_binding_sid, no_te_path_sr_policy_binding_sid_cmd,
-      "no binding-sid [(0-1048575)]",
+      "no binding-sid [(16-1048575)]",
       NO_STR
       "Segment Routing Policy Binding-SID\n"
       "SR Policy Binding-SID label\n")
